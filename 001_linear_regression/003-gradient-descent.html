@@ -133,6 +133,20 @@
             border: 1px solid #eee;
         }
 
+        .equation-display {
+            margin-left: auto;
+            font-family: monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            background: #f0f9ff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #bae6fd;
+            min-width: 200px;
+            text-align: center;
+        }
+
         /* Visualization Grid */
         .viz-grid {
             display: grid;
@@ -246,6 +260,10 @@
             <label>Learning Rate (α): <span id="lrValue">0.05</span></label>
             <input type="range" id="lrSlider" min="0.01" max="0.2" step="0.01" value="0.05">
         </div>
+
+        <div class="equation-display" id="equationDisplay">
+            y = 0.00x + 0.00
+        </div>
     </div>
 
     <!-- Visualizations -->
@@ -258,7 +276,7 @@
             <div id="plot2d" class="viz-content"></div>
             <div class="overlay-info">
                 <div class="info-row"><span class="info-label">Epoch</span><span class="info-value" id="epochDisplay">0</span></div>
-                <div class="info-row"><span class="info-label">Slope (m)</span><span class="info-value" id="slopeDisplay">0.00</span></div>
+                <div class="info-row"><span class="info-label">Slope (a)</span><span class="info-value" id="slopeDisplay">0.00</span></div>
                 <div class="info-row"><span class="info-label">Intercept (b)</span><span class="info-value" id="interceptDisplay">0.00</span></div>
             </div>
         </div>
@@ -651,6 +669,9 @@
         document.getElementById('interceptDisplay').textContent = state.targetB.toFixed(3);
         document.getElementById('lossDisplay').textContent = loss.toFixed(2);
         document.getElementById('gradDisplay').textContent = gradNorm.toFixed(3);
+
+        const sign = state.targetB >= 0 ? '+' : '-';
+        document.getElementById('equationDisplay').textContent = `y = ${state.targetM.toFixed(2)}x ${sign} ${Math.abs(state.targetB).toFixed(2)}`;
     }
 
     // ==========================================
@@ -694,6 +715,7 @@
         document.getElementById('slopeDisplay').textContent = "0.00";
         document.getElementById('interceptDisplay').textContent = "0.00";
         document.getElementById('gradDisplay').textContent = "0.00";
+        document.getElementById('equationDisplay').textContent = "y = 0.00x + 0.00";
         
         update2DLine();
     }
