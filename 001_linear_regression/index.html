@@ -26,7 +26,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Prevent body scroll, handle inside containers */
+            overflow: hidden;
         }
 
         .main-layout {
@@ -153,10 +153,16 @@
         .content {
             padding: 20px;
             display: grid;
-            grid-template-rows: 450px 800px;
+            grid-template-rows: 450px 600px 600px; /* 3 rows */
             gap: 20px;
             overflow-y: auto;
             background-color: #f0f2f5;
+        }
+
+        @media (max-width: 900px) {
+            .main-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .sidebar { height: auto; max-height: 40vh; }
+            .content { grid-template-rows: 400px 500px 500px; }
         }
 
         .viz-card {
@@ -175,14 +181,24 @@
             left: 20px;
             z-index: 5;
             pointer-events: none;
+            background: rgba(255,255,255,0.8);
+            padding: 5px 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
         }
 
         .viz-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: rgba(0,0,0,0.5);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #2c3e50;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+        }
+
+        .viz-desc {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            margin-top: 2px;
         }
 
         /* 2D Plotly Container */
@@ -232,27 +248,6 @@
         .icon-btn:hover { color: var(--accent-color); }
         .icon-btn.active { color: var(--accent-color); border-color: var(--accent-color); }
 
-        .hint-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .viz-card:hover .hint-overlay { opacity: 0; } /* Hide when interacting? No, logic handled in JS */
-
-        @media (max-width: 900px) {
-            .main-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-            .sidebar { height: auto; max-height: 40vh; }
-            .content { grid-template-rows: 400px 600px; }
-        }
     </style>
 </head>
 <body>
@@ -299,8 +294,8 @@
             <strong>Instructions:</strong><br>
             • Drag points on the 2D plot to change data.<br>
             • Drag the 3D surface to rotate view.<br>
-            • <strong>Scroll</strong> to zoom in/out the 3D surface.<br>
-            • Observe how the "bowl" shape guides you to the minimum error (blue zone).
+            • <strong>Scroll</strong> to zoom in/out.<br>
+            • Compare the normalized vs raw geometry.
         </div>
     </div>
 
@@ -314,10 +309,11 @@
             <div id="plot2d"></div>
         </div>
 
-        <!-- 3D Graph -->
+        <!-- 3D Graph (Normalized) -->
         <div class="viz-card">
             <div class="viz-header">
-                <div class="viz-title">Loss Landscape (Convex SSE)</div>
+                <div class="viz-title">Normalized Loss Landscape</div>
+                <div class="viz-desc">Symmetric "bowl" for intuition</div>
             </div>
             <div class="canvas-container" id="container3d">
                 <canvas id="canvas3d"></canvas>
@@ -325,6 +321,17 @@
                     <button class="icon-btn" id="rotateBtn" title="Auto Rotate">⏯</button>
                     <button class="icon-btn" id="resetViewBtn" title="Reset View">⟲</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- 3D Graph (Raw) -->
+        <div class="viz-card">
+            <div class="viz-header">
+                <div class="viz-title">Raw Loss Surface</div>
+                <div class="viz-desc">True geometry of SSE (asymmetric)</div>
+            </div>
+            <div class="canvas-container" id="container3dRaw">
+                <canvas id="canvas3dRaw"></canvas>
             </div>
         </div>
     </div>
@@ -358,10 +365,10 @@
         selectedPoint: null
     };
 
-    // 3D Visualization State
+    // 3D Visualization State (Shared between both plots)
     let canvasState = {
-        rotation: { x: 0.6, y: 0.4 }, // Initial angle looking slightly down
-        zoom: 1.0, // Zoom factor
+        rotation: { x: 0.6, y: 0.4 }, 
+        zoom: 1.0, 
         autoRotate: true,
         dragging: false,
         lastMouse: { x: 0, y: 0 }
@@ -382,7 +389,6 @@
         let minE = Infinity;
         let bestS = 0;
         let bestI = 0;
-        // Simple grid search for robustness in this demo
         for (let s = rangeConfig.slope.min; s <= rangeConfig.slope.max; s += 0.1) {
             for (let i = rangeConfig.intercept.min; i <= rangeConfig.intercept.max; i += 0.1) {
                 const e = calculateSSE(s, i, data.x, data.y);
@@ -397,7 +403,6 @@
     function updateState(updateSliders = false) {
         state.sse = calculateSSE(state.slope, state.intercept, data.x, data.y);
         
-        // Update DOM
         document.getElementById('sseDisplay').textContent = state.sse.toFixed(2);
         document.getElementById('equation').textContent = `y = ${state.slope.toFixed(2)}x + ${state.intercept.toFixed(2)}`;
         document.getElementById('slopeValue').textContent = state.slope.toFixed(2);
@@ -409,7 +414,7 @@
         }
 
         update2D();
-        // 3D update is handled in the animation loop
+        // 3D updates handle themselves in the animation loop
     }
 
     // ==========================================
@@ -427,12 +432,11 @@
             paper_bgcolor: 'white'
         };
         
-        // Increase point size for easier grabbing
         const pointsTrace = {
             x: data.x,
             y: data.y,
             mode: 'markers',
-            marker: { color: '#2980b9', size: 15, line: { color: 'white', width: 2 } }, // Larger size
+            marker: { color: '#2980b9', size: 15, line: { color: 'white', width: 2 } }, 
             type: 'scatter',
             hoverinfo: 'x+y'
         };
@@ -445,16 +449,26 @@
             hoverinfo: 'skip'
         };
 
-        Plotly.newPlot('plot2d', [pointsTrace, regressionLine], layout, { 
+        // Initialize Residual Lines (placeholders)
+        const residualTraces = data.x.map(() => ({
+            x: [0, 0],
+            y: [0, 0],
+            mode: 'lines',
+            line: { color: 'rgba(231, 76, 60, 0.4)', width: 1, dash: 'dash' },
+            hoverinfo: 'skip',
+            type: 'scatter'
+        }));
+
+        Plotly.newPlot('plot2d', [pointsTrace, regressionLine, ...residualTraces], layout, { 
             responsive: true, 
             displayModeBar: false 
         });
 
+        // ... event listeners ...
         const plotEl = document.getElementById('plot2d');
         let hoveredPointIndex = null;
         let dragPointIndex = null;
 
-        // 1. Track Hover State
         plotEl.on('plotly_hover', function(data) {
             if (dragPointIndex === null && data.points && data.points.length > 0 && data.points[0].curveNumber === 0) {
                 hoveredPointIndex = data.points[0].pointIndex;
@@ -469,18 +483,15 @@
             }
         });
 
-        // 2. Start Drag on Mousedown
         plotEl.addEventListener('mousedown', function(e) {
             if (hoveredPointIndex !== null) {
                 dragPointIndex = hoveredPointIndex;
                 plotEl.style.cursor = 'grabbing';
-                // Disable text selection during drag
                 document.body.style.userSelect = 'none';
-                e.preventDefault(); // Prevent default text selection start
+                e.preventDefault(); 
             }
         });
 
-        // 3. Handle Drag Move
         window.addEventListener('mousemove', function(e) {
             if (dragPointIndex === null) return;
 
@@ -489,114 +500,85 @@
             const xaxis = fullLayout.xaxis;
             const yaxis = fullLayout.yaxis;
 
-            // Calculate mouse position relative to axis area
-            // xaxis._offset is the left margin in pixels
-            // yaxis._offset is the top margin in pixels
             const xPixel = e.clientX - rect.left - xaxis._offset;
             const yPixel = e.clientY - rect.top - yaxis._offset;
 
-            // Manual Pixel-to-Data Conversion (Linear)
-            // x = min + (px / length) * (max - min)
             let newX = xaxis.range[0] + (xPixel / xaxis._length) * (xaxis.range[1] - xaxis.range[0]);
-            
-            // y = max - (px / length) * (max - min)  <-- Y is inverted in pixels usually
-            // Wait, Plotly Y pixels go Top->Bottom (0 at top). Y Data goes Bottom->Top.
-            // So: pixel 0 is y_max. pixel length is y_min.
             let newY = yaxis.range[1] - (yPixel / yaxis._length) * (yaxis.range[1] - yaxis.range[0]);
 
-            // Clamp
             newX = Math.max(0, Math.min(4, newX));
             newY = Math.max(0, Math.min(40, newY));
 
-            // Update Data
             data.x[dragPointIndex] = newX;
             data.y[dragPointIndex] = newY;
 
-            // Efficiently update only the points trace
-            // We use Plotly.restyle for speed, then trigger logic
-            Plotly.restyle('plot2d', {
-                x: [data.x],
-                y: [data.y]
-            }, [0]); 
+            // Update points trace [0]
+            Plotly.restyle('plot2d', { x: [data.x], y: [data.y] }, [0]); 
 
-            // Update Residuals and Regression Line? 
-            // Actually `updateState()` does `Plotly.react` which redraws everything.
-            // For max performance we could separate them, but react is fast enough here.
-            // Let's rely on updateState() for consistency, but maybe throttle it?
-            // updateState() calls findOptimum -> generateGrid -> update2D -> 3D Loop
-            // It might be heavy. Let's try direct call.
-            
             findOptimum();
             generateGrid();
-            
-            // We need to update the lines in the plot too. 
-            // Calling updateState() triggers update2D() which uses Plotly.react.
             updateState();
         });
 
-        // 4. End Drag
         window.addEventListener('mouseup', function() {
             if (dragPointIndex !== null) {
                 dragPointIndex = null;
                 plotEl.style.cursor = '';
                 document.body.style.userSelect = '';
-                // Refresh hover state in case mouse is still over a point
                 hoveredPointIndex = null; 
             }
         });
+        
+        // Initial draw of residuals
+        update2D();
     }
 
     function update2D() {
-        const regressionLine = {
-            x: [0, 4],
-            y: [state.intercept, state.slope * 4 + state.intercept],
-            mode: 'lines',
-            line: { color: '#e74c3c', width: 3 }
-        };
+        const yStart = state.intercept;
+        const yEnd = state.slope * 4 + state.intercept;
+        
+        // Update Regression Line (Trace 1)
+        Plotly.restyle('plot2d', {
+            x: [[0, 4]],
+            y: [[yStart, yEnd]]
+        }, [1]);
 
-        const points = {
-            x: data.x,
-            y: data.y,
-            mode: 'markers',
-            marker: { color: '#2980b9', size: 12, line: { color: 'white', width: 2 } },
-            type: 'scatter'
-        };
+        // Update Residual Lines (Traces 2 to N+2)
+        const xUpdates = [];
+        const yUpdates = [];
+        const indices = [];
 
-        // Residuals (vertical lines)
-        const residuals = [];
-        for(let k=0; k<data.x.length; k++) {
-            const pred = state.slope * data.x[k] + state.intercept;
-            residuals.push({
-                x: [data.x[k], data.x[k]],
-                y: [data.y[k], pred],
-                mode: 'lines',
-                line: { color: 'rgba(231, 76, 60, 0.3)', width: 1, dash: 'dash' },
-                hoverinfo: 'skip'
-            });
+        for(let i=0; i<data.x.length; i++) {
+            const pred = state.slope * data.x[i] + state.intercept;
+            xUpdates.push([data.x[i], data.x[i]]);
+            yUpdates.push([data.y[i], pred]);
+            indices.push(i + 2);
         }
 
-        Plotly.react('plot2d', [points, regressionLine, ...residuals], 
-            document.getElementById('plot2d').layout, 
-            { responsive: true, displayModeBar: false }
-        );
+        Plotly.restyle('plot2d', {
+            x: xUpdates,
+            y: yUpdates
+        }, indices);
     }
 
     // ==========================================
-    // 3D CANVAS ENGINE (Custom)
+    // 3D ENGINE (Supports Multiple Canvases)
     // ==========================================
     const canvas = document.getElementById('canvas3d');
     const ctx = canvas.getContext('2d');
+    
+    const canvasRaw = document.getElementById('canvas3dRaw');
+    const ctxRaw = canvasRaw.getContext('2d');
+
     let gridPoints = [];
     let triangles = [];
 
-    // Helper: Viridis Colormap Interpolation
     function getViridisColor(t) {
-        // Approximate Viridis control points
-        const c0 = [68, 1, 84];   // Dark purple
-        const c1 = [59, 82, 139]; // Blue
-        const c2 = [33, 145, 140];// Teal
-        const c3 = [94, 201, 98]; // Green
-        const c4 = [253, 231, 37];// Yellow
+        const c0 = [68, 1, 84]; 
+        const c1 = [59, 82, 139];
+        const c2 = [33, 145, 140];
+        const c3 = [94, 201, 98]; 
+        const c4 = [253, 231, 37];
         
         let cStart, cEnd, localT;
         if (t < 0.25) { cStart = c0; cEnd = c1; localT = t / 0.25; }
@@ -610,15 +592,18 @@
         return `rgb(${r},${g},${b})`;
     }
 
-    // Precompute Grid
     function generateGrid() {
-        const steps = 25; // Grid resolution
+        const steps = 30; // Higher resolution
         const sMin = 0, sMax = 15;
         const iMin = -5, iMax = 20;
         
+        // Define aspect scales for RAW view
+        // We want to map Slope(15 units) and Intercept(25 units) to relative sizes.
+        // Let's assume 1 world unit = 10 data units.
+        const scaleWorld = 0.15;
+        
         gridPoints = [];
         
-        // 1. Generate points
         for (let r = 0; r <= steps; r++) {
             const intercept = iMin + (iMax - iMin) * (r / steps);
             for (let c = 0; c <= steps; c++) {
@@ -628,27 +613,34 @@
             }
         }
 
-        // 2. Find min/max for normalization
-        let maxVal = 0;
-        let minVal = Infinity;
+        let maxVal = 0, minVal = Infinity;
         gridPoints.forEach(p => {
             if (p.val > maxVal) maxVal = p.val;
             if (p.val < minVal) minVal = p.val;
         });
 
-        // 3. Normalize and center for 3D world space
-        // World coords: X (slope), Z (intercept), Y (SSE - up)
+        // Compute Coordinates
         gridPoints.forEach(p => {
-            p.wx = (p.slope - sMin) / (sMax - sMin) * 2 - 1; // -1 to 1
-            p.wz = (p.intercept - iMin) / (iMax - iMin) * 2 - 1; // -1 to 1
-            // Non-linear scaling for SSE to emphasize the bowl bottom
-            // Standard normalization
+            // NORMALIZED COORDS (Unit Cube-ish)
+            p.wx = (p.slope - sMin) / (sMax - sMin) * 2 - 1; 
+            p.wz = (p.intercept - iMin) / (iMax - iMin) * 2 - 1; 
             let norm = (p.val - minVal) / (maxVal - minVal); 
-            p.wy = norm * 1.5 - 0.75; // Height scaling
-            p.colorT = norm; // 0 (good) to 1 (bad)
+            p.wy = norm * 1.5 - 0.75; 
+            p.colorT = norm;
+
+            // RAW COORDS (Preserve Aspect Ratio)
+            // Center around midpoints
+            const midS = (sMax + sMin) / 2;
+            const midI = (iMax + iMin) / 2;
+            
+            p.rx = (p.slope - midS) * scaleWorld;      // Slope axis
+            p.rz = (p.intercept - midI) * scaleWorld;  // Intercept axis (will be wider)
+            
+            // Raw height: scale linearly but don't force to fill box
+            // SSE can be 1000+, scale to be viewable
+            p.ry = (p.val - minVal) * 0.003 - 0.5; // Arbitrary scale to look good
         });
 
-        // 4. Generate Triangles
         triangles = [];
         for (let r = 0; r < steps; r++) {
             for (let c = 0; c < steps; c++) {
@@ -656,162 +648,175 @@
                 const i1 = i0 + 1;
                 const i2 = (r + 1) * (steps + 1) + c;
                 const i3 = i2 + 1;
-
-                // Two triangles per grid cell
                 triangles.push([i0, i1, i2]);
                 triangles.push([i1, i3, i2]);
             }
         }
     }
 
-    // 3D Projection Math
-    function project(p, w, h, rotX, rotY, zoom) {
+    function project(x, y, z, w, h, rotX, rotY, zoom) {
         // Rotate Y
-        let x = p.wx * Math.cos(rotY) - p.wz * Math.sin(rotY);
-        let z = p.wx * Math.sin(rotY) + p.wz * Math.cos(rotY);
-        let y = p.wy;
+        let px = x * Math.cos(rotY) - z * Math.sin(rotY);
+        let pz = x * Math.sin(rotY) + z * Math.cos(rotY);
+        let py = y;
 
         // Rotate X
-        let y2 = y * Math.cos(rotX) - z * Math.sin(rotX);
-        let z2 = y * Math.sin(rotX) + z * Math.cos(rotX);
+        let py2 = py * Math.cos(rotX) - pz * Math.sin(rotX);
+        let pz2 = py * Math.sin(rotX) + pz * Math.cos(rotX);
 
         // Perspective
-        const dist = 3.5;
-        const scale = Math.min(w, h) * 0.8 * zoom; // Apply zoom
-        const f = scale / (z2 + dist);
+        const dist = 4.5; // Camera distance
+        const scale = Math.min(w, h) * 0.9 * zoom;
+        const f = scale / (pz2 + dist);
 
         return {
-            x: w/2 + x * f,
-            y: h/2 - y2 * f, // Invert Y for canvas
-            z: z2, // for z-sorting
+            x: w/2 + px * f,
+            y: h/2 - py2 * f, 
+            z: pz2, 
             f: f
         };
     }
 
-    function draw3D() {
-        const w = canvas.width;
-        const h = canvas.height;
-        ctx.clearRect(0, 0, w, h);
+    function renderScene(context, canvasWidth, canvasHeight, isRaw) {
+        context.clearRect(0, 0, canvasWidth, canvasHeight);
 
-        if (canvasState.autoRotate) {
-            canvasState.rotation.y += 0.005;
-        }
-
-        // Project all points
+        // 1. Project Points
         const projPoints = gridPoints.map(p => {
-            const proj = project(p, w, h, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
+            // Choose source coords
+            const X = isRaw ? p.rx : p.wx;
+            const Y = isRaw ? p.ry : p.wy;
+            const Z = isRaw ? p.rz : p.wz;
+            
+            const proj = project(X, Y, Z, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
             return { ...p, px: proj.x, py: proj.y, pz: proj.z };
         });
 
-        // Prepare triangles with Z-sorting
+        // 2. Sort Triangles
         const renderList = triangles.map(tri => {
             const p0 = projPoints[tri[0]];
             const p1 = projPoints[tri[1]];
             const p2 = projPoints[tri[2]];
-            
-            // Average Z for sorting
             const z = (p0.pz + p1.pz + p2.pz) / 3;
-            
-            // Average Color T
             const t = (p0.colorT + p1.colorT + p2.colorT) / 3;
-            
             return { p0, p1, p2, z, t };
-        }).sort((a, b) => b.z - a.z); // Painter's algo: draw far to near
+        }).sort((a, b) => b.z - a.z);
 
-        // Draw Surface
+        // 3. Draw Surface
         renderList.forEach(tri => {
-            ctx.beginPath();
-            ctx.moveTo(tri.p0.px, tri.p0.py);
-            ctx.lineTo(tri.p1.px, tri.p1.py);
-            ctx.lineTo(tri.p2.px, tri.p2.py);
-            ctx.closePath();
-
-            // Fill
-            const col = getViridisColor(tri.t); // Color based on height (SSE)
-            // Add distance fog / shading approximation
-            ctx.fillStyle = col;
-            ctx.fill();
-
-            // Wireframe stroke
-            ctx.strokeStyle = "rgba(255,255,255,0.15)";
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            context.beginPath();
+            context.moveTo(tri.p0.px, tri.p0.py);
+            context.lineTo(tri.p1.px, tri.p1.py);
+            context.lineTo(tri.p2.px, tri.p2.py);
+            context.closePath();
+            context.fillStyle = getViridisColor(tri.t);
+            context.fill();
+            context.strokeStyle = "rgba(255,255,255,0.1)";
+            context.lineWidth = 1;
+            context.stroke();
         });
 
-        // Draw "Current Position" Marker
+        // 4. Draw Markers (User & Optimal)
         const sMin = 0, sMax = 15;
         const iMin = -5, iMax = 20;
+        const midS = (sMax + sMin) / 2;
+        const midI = (iMax + iMin) / 2;
+        const scaleWorld = 0.15;
+
+        // Current Marker
+        let curX, curY, curZ;
         
-        // Calculate world pos of current state
-        const curWx = (state.slope - sMin) / (sMax - sMin) * 2 - 1;
-        const curWz = (state.intercept - iMin) / (iMax - iMin) * 2 - 1;
-        
-        // Find height (SSE) normalized
         let gridMax = -Infinity, gridMin = Infinity;
         gridPoints.forEach(p => { if(p.val>gridMax) gridMax=p.val; if(p.val<gridMin) gridMin=p.val; });
-        
-        const curSSE = state.sse;
-        const curNorm = (curSSE - gridMin) / (gridMax - gridMin);
-        const curWy = curNorm * 1.5 - 0.75;
+        const curNorm = (state.sse - gridMin) / (gridMax - gridMin);
 
-        const curProj = project({ wx: curWx, wy: curWy, wz: curWz }, w, h, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
-        
-        // Draw Red Dot (User)
-        ctx.beginPath();
-        ctx.arc(curProj.x, curProj.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = "#e74c3c"; // Red
-        ctx.fill();
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        if (isRaw) {
+            curX = (state.slope - midS) * scaleWorld;
+            curZ = (state.intercept - midI) * scaleWorld;
+            curY = (state.sse - gridMin) * 0.003 - 0.5;
+        } else {
+            curX = (state.slope - sMin) / (sMax - sMin) * 2 - 1;
+            curZ = (state.intercept - iMin) / (iMax - iMin) * 2 - 1;
+            curY = curNorm * 1.5 - 0.75;
+        }
 
-        // Draw Optimum (Blue Diamond)
-        const optWx = (state.bestSlope - sMin) / (sMax - sMin) * 2 - 1;
-        const optWz = (state.bestIntercept - iMin) / (iMax - iMin) * 2 - 1;
+        const curProj = project(curX, curY, curZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
+        
+        context.beginPath();
+        context.arc(curProj.x, curProj.y, 6, 0, Math.PI * 2);
+        context.fillStyle = "#e74c3c"; 
+        context.fill();
+        context.strokeStyle = "white"; 
+        context.lineWidth = 2; context.stroke();
+
+        // Optimal Marker
+        let optX, optY, optZ;
         const optNorm = (state.minSSE - gridMin) / (gridMax - gridMin);
-        const optWy = optNorm * 1.5 - 0.75;
-        const optProj = project({ wx: optWx, wy: optWy, wz: optWz }, w, h, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
 
-        ctx.beginPath();
-        ctx.moveTo(optProj.x, optProj.y - 6);
-        ctx.lineTo(optProj.x + 6, optProj.y);
-        ctx.lineTo(optProj.x, optProj.y + 6);
-        ctx.lineTo(optProj.x - 6, optProj.y);
-        ctx.closePath();
-        ctx.fillStyle = "#3498db"; // Blue
-        ctx.fill();
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        if (isRaw) {
+            optX = (state.bestSlope - midS) * scaleWorld;
+            optZ = (state.bestIntercept - midI) * scaleWorld;
+            optY = (state.minSSE - gridMin) * 0.003 - 0.5;
+        } else {
+            optX = (state.bestSlope - sMin) / (sMax - sMin) * 2 - 1;
+            optZ = (state.bestIntercept - iMin) / (iMax - iMin) * 2 - 1;
+            optY = optNorm * 1.5 - 0.75;
+        }
 
-        requestAnimationFrame(draw3D);
+        const optProj = project(optX, optY, optZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
+
+        context.beginPath();
+        context.moveTo(optProj.x, optProj.y - 6);
+        context.lineTo(optProj.x + 6, optProj.y);
+        context.lineTo(optProj.x, optProj.y + 6);
+        context.lineTo(optProj.x - 6, optProj.y);
+        context.closePath();
+        context.fillStyle = "#3498db";
+        context.fill();
+        context.strokeStyle = "white"; 
+        context.lineWidth = 2; context.stroke();
+    }
+
+    function drawLoop() {
+        if (canvasState.autoRotate) {
+            canvasState.rotation.y += 0.005;
+        }
+
+        // Render Normalized
+        renderScene(ctx, canvas.width, canvas.height, false);
+        
+        // Render Raw
+        renderScene(ctxRaw, canvasRaw.width, canvasRaw.height, true);
+
+        requestAnimationFrame(drawLoop);
     }
 
     function resizeCanvas() {
-        const container = document.getElementById('container3d');
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
-        generateGrid(); // Re-generate grid points if needed, or just redraw
+        const c1 = document.getElementById('container3d');
+        canvas.width = c1.clientWidth;
+        canvas.height = c1.clientHeight;
+
+        const c2 = document.getElementById('container3dRaw');
+        canvasRaw.width = c2.clientWidth;
+        canvasRaw.height = c2.clientHeight;
+
+        generateGrid(); 
     }
 
     // ==========================================
-    // INITIALIZATION & EVENTS
+    // INITIALIZATION
     // ==========================================
     window.onload = function() {
         findOptimum();
         
-        // Initial setup
         document.getElementById('slopeSlider').value = state.slope;
         document.getElementById('interceptSlider').value = state.intercept;
         
         init2D();
         updateState();
         
-        generateGrid(); // For 3D
         resizeCanvas();
-        requestAnimationFrame(draw3D);
+        requestAnimationFrame(drawLoop);
 
-        // Resize handler
         window.addEventListener('resize', () => {
             Plotly.Plots.resize('plot2d');
             resizeCanvas();
@@ -833,39 +838,34 @@
             state.intercept = state.bestIntercept;
             updateState(true);
         });
-
         document.getElementById('resetBtn').addEventListener('click', () => {
-            state.slope = 6.5;
-            state.intercept = 3.5;
+            state.slope = 6.5; state.intercept = 3.5;
             updateState(true);
         });
-
         document.getElementById('resetDataBtn').addEventListener('click', () => {
-            data.x = [...originalData.x];
-            data.y = [...originalData.y];
-            findOptimum();
-            generateGrid();
-            updateState(true);
+            data.x = [...originalData.x]; data.y = [...originalData.y];
+            findOptimum(); generateGrid(); updateState(true);
         });
 
-        // 3D Controls
-        const container3d = document.getElementById('container3d');
-        
-        container3d.addEventListener('mousedown', e => {
-            canvasState.dragging = true;
-            canvasState.lastMouse = { x: e.clientX, y: e.clientY };
-            canvasState.autoRotate = false;
-            document.getElementById('rotateBtn').classList.remove('active');
-        });
+        // Universal Controls (Apply to both canvases via Shared State)
+        function setupControls(container) {
+            container.addEventListener('mousedown', e => {
+                canvasState.dragging = true;
+                canvasState.lastMouse = { x: e.clientX, y: e.clientY };
+                canvasState.autoRotate = false;
+                document.getElementById('rotateBtn').classList.remove('active');
+            });
+            
+            container.addEventListener('wheel', e => {
+                e.preventDefault();
+                const zoomSpeed = 0.02;
+                canvasState.zoom += -e.deltaY * zoomSpeed;
+                canvasState.zoom = Math.max(0.5, Math.min(8.0, canvasState.zoom));
+            }, { passive: false });
+        }
 
-        // ZOOM HANDLER (NEW)
-        container3d.addEventListener('wheel', e => {
-            e.preventDefault();
-            const zoomSpeed = 0.02;
-            canvasState.zoom += -e.deltaY * zoomSpeed;
-            // Clamp zoom
-            canvasState.zoom = Math.max(0.5, Math.min(8.0, canvasState.zoom));
-        }, { passive: false });
+        setupControls(document.getElementById('container3d'));
+        setupControls(document.getElementById('container3dRaw'));
         
         window.addEventListener('mouseup', () => { canvasState.dragging = false; });
         
@@ -873,12 +873,9 @@
             if (!canvasState.dragging) return;
             const dx = e.clientX - canvasState.lastMouse.x;
             const dy = e.clientY - canvasState.lastMouse.y;
-            
             canvasState.rotation.y += dx * 0.01;
             canvasState.rotation.x += dy * 0.01;
-            // Clamp X rotation to avoid flipping
             canvasState.rotation.x = Math.max(-1.5, Math.min(1.5, canvasState.rotation.x));
-
             canvasState.lastMouse = { x: e.clientX, y: e.clientY };
         });
 
@@ -886,11 +883,11 @@
             canvasState.autoRotate = !canvasState.autoRotate;
             this.classList.toggle('active', canvasState.autoRotate);
         });
-        document.getElementById('rotateBtn').classList.add('active'); // Default on
+        document.getElementById('rotateBtn').classList.add('active');
 
         document.getElementById('resetViewBtn').addEventListener('click', () => {
             canvasState.rotation = { x: 0.6, y: 0.4 };
-            canvasState.zoom = 1.0; // Reset Zoom
+            canvasState.zoom = 1.0;
         });
     };
 </script>
