@@ -427,11 +427,121 @@
             paper_bgcolor: 'white'
         };
         
-        Plotly.newPlot('plot2d', [], layout, { responsive: true, displayModeBar: false });
-        
-        document.getElementById('plot2d').on('plotly_click', d => {
-            if (d.points[0].curveNumber === 0) { // Clicked a data point
-                 // Simple toggle edit logic could go here
+        // Increase point size for easier grabbing
+        const pointsTrace = {
+            x: data.x,
+            y: data.y,
+            mode: 'markers',
+            marker: { color: '#2980b9', size: 15, line: { color: 'white', width: 2 } }, // Larger size
+            type: 'scatter',
+            hoverinfo: 'x+y'
+        };
+
+        const regressionLine = {
+            x: [0, 4],
+            y: [state.intercept, state.slope * 4 + state.intercept],
+            mode: 'lines',
+            line: { color: '#e74c3c', width: 3 },
+            hoverinfo: 'skip'
+        };
+
+        Plotly.newPlot('plot2d', [pointsTrace, regressionLine], layout, { 
+            responsive: true, 
+            displayModeBar: false 
+        });
+
+        const plotEl = document.getElementById('plot2d');
+        let hoveredPointIndex = null;
+        let dragPointIndex = null;
+
+        // 1. Track Hover State
+        plotEl.on('plotly_hover', function(data) {
+            if (dragPointIndex === null && data.points && data.points.length > 0 && data.points[0].curveNumber === 0) {
+                hoveredPointIndex = data.points[0].pointIndex;
+                plotEl.style.cursor = 'pointer';
+            }
+        });
+
+        plotEl.on('plotly_unhover', function() {
+            if (dragPointIndex === null) {
+                hoveredPointIndex = null;
+                plotEl.style.cursor = '';
+            }
+        });
+
+        // 2. Start Drag on Mousedown
+        plotEl.addEventListener('mousedown', function(e) {
+            if (hoveredPointIndex !== null) {
+                dragPointIndex = hoveredPointIndex;
+                plotEl.style.cursor = 'grabbing';
+                // Disable text selection during drag
+                document.body.style.userSelect = 'none';
+                e.preventDefault(); // Prevent default text selection start
+            }
+        });
+
+        // 3. Handle Drag Move
+        window.addEventListener('mousemove', function(e) {
+            if (dragPointIndex === null) return;
+
+            const rect = plotEl.getBoundingClientRect();
+            const fullLayout = plotEl._fullLayout;
+            const xaxis = fullLayout.xaxis;
+            const yaxis = fullLayout.yaxis;
+
+            // Calculate mouse position relative to axis area
+            // xaxis._offset is the left margin in pixels
+            // yaxis._offset is the top margin in pixels
+            const xPixel = e.clientX - rect.left - xaxis._offset;
+            const yPixel = e.clientY - rect.top - yaxis._offset;
+
+            // Manual Pixel-to-Data Conversion (Linear)
+            // x = min + (px / length) * (max - min)
+            let newX = xaxis.range[0] + (xPixel / xaxis._length) * (xaxis.range[1] - xaxis.range[0]);
+            
+            // y = max - (px / length) * (max - min)  <-- Y is inverted in pixels usually
+            // Wait, Plotly Y pixels go Top->Bottom (0 at top). Y Data goes Bottom->Top.
+            // So: pixel 0 is y_max. pixel length is y_min.
+            let newY = yaxis.range[1] - (yPixel / yaxis._length) * (yaxis.range[1] - yaxis.range[0]);
+
+            // Clamp
+            newX = Math.max(0, Math.min(4, newX));
+            newY = Math.max(0, Math.min(40, newY));
+
+            // Update Data
+            data.x[dragPointIndex] = newX;
+            data.y[dragPointIndex] = newY;
+
+            // Efficiently update only the points trace
+            // We use Plotly.restyle for speed, then trigger logic
+            Plotly.restyle('plot2d', {
+                x: [data.x],
+                y: [data.y]
+            }, [0]); 
+
+            // Update Residuals and Regression Line? 
+            // Actually `updateState()` does `Plotly.react` which redraws everything.
+            // For max performance we could separate them, but react is fast enough here.
+            // Let's rely on updateState() for consistency, but maybe throttle it?
+            // updateState() calls findOptimum -> generateGrid -> update2D -> 3D Loop
+            // It might be heavy. Let's try direct call.
+            
+            findOptimum();
+            generateGrid();
+            
+            // We need to update the lines in the plot too. 
+            // Calling updateState() triggers update2D() which uses Plotly.react.
+            updateState();
+        });
+
+        // 4. End Drag
+        window.addEventListener('mouseup', function() {
+            if (dragPointIndex !== null) {
+                dragPointIndex = null;
+                plotEl.style.cursor = '';
+                document.body.style.userSelect = '';
+                // Refresh hover state in case mouse is still over a point
+                hoveredPointIndex = null; 
             }
         });
     }
