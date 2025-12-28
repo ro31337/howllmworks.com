@@ -671,7 +671,11 @@
         document.getElementById('gradDisplay').textContent = gradNorm.toFixed(3);
 
         const sign = state.targetB >= 0 ? '+' : '-';
-        document.getElementById('equationDisplay').textContent = `y = ${state.targetM.toFixed(2)}x ${sign} ${Math.abs(state.targetB).toFixed(2)}`;
+        const el = document.getElementById('equationDisplay');
+        // Use LaTeX syntax
+        el.innerHTML = `$$ y = ${state.targetM.toFixed(2)}x ${sign} ${Math.abs(state.targetB).toFixed(2)} $$`;
+        // Trigger re-render
+        MathJax.typesetPromise([el]);
     }
 
     // ==========================================
@@ -715,7 +719,10 @@
         document.getElementById('slopeDisplay').textContent = "0.00";
         document.getElementById('interceptDisplay').textContent = "0.00";
         document.getElementById('gradDisplay').textContent = "0.00";
-        document.getElementById('equationDisplay').textContent = "y = 0.00x + 0.00";
+        
+        const el = document.getElementById('equationDisplay');
+        el.innerHTML = `$$ y = 0.00x + 0.00 $$`;
+        MathJax.typesetPromise([el]);
         
         update2DLine();
     }
