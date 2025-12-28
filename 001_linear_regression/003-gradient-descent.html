@@ -284,9 +284,9 @@
 </div>
 
 <script>
-    // ========================================== 
+    // ==========================================
     // CONFIGURATION & STATE
-    // ========================================== 
+    // ==========================================
     const config = {
         bgColor: '#ffffff',
         gridColor: 'rgba(0,0,0,0.1)',
@@ -298,7 +298,9 @@
             path: '#ffffff',       // Path color
             point: '#ef4444'       // Current point red
         },
-        animationSpeed: 50, // ms per step
+        // Animation Physics
+        lerpFactor: 0.1, // "Smoothing" factor (lower = smoother/slower)
+        stepThreshold: 0.001 // How close to target before taking next step
     };
 
     const data = {
@@ -306,19 +308,23 @@
         y: [2, 3.2, 3.8, 5.1, 6.2, 6.8, 8.1, 8.9, 10.2, 11]
     };
 
-    // Normalize Data for better gradients
-    // (Optional, but helps stability. Here we use raw to match user intuition, 
-    // but scale inputs to gradient calculation)
     const M = data.x.length;
 
     let state = {
-        m: 0,           // Slope
-        b: 0,           // Intercept
-        lr: 0.05,       // Learning Rate
-        history: [],    // Optimization path
+        // Target (Mathematical) State
+        targetM: 0,
+        targetB: 0,
+        
+        // Visual (Rendered) State
+        visualM: 0,
+        visualB: 0,
+        
+        lr: 0.01,       // Learning Rate (Lowered for visibility)
+        history: [],    // Optimization path (only completed steps)
+        
         isRunning: false,
         epoch: 0,
-        intervalId: null
+        isConverged: false
     };
 
     let camera = {
@@ -344,9 +350,9 @@
         b: { min: -2, max: 4 }
     };
 
-    // ========================================== 
+    // ==========================================
     // MATH & OPTIMIZATION
-    // ========================================== 
+    // ==========================================
     function calculateSSE(m, b) {
         let error = 0;
         for (let i = 0; i < M; i++) {
@@ -365,40 +371,37 @@
             dm += diff * data.x[i];
             db += diff;
         }
-        return { dm: (2/M) * dm, db: (2/M) * db }; // Mean Squared Error Gradient scale
+        return { dm: (2/M) * dm, db: (2/M) * db }; 
     }
 
-    function stepGradient() {
-        const grads = calculateGradient(state.m, state.b);
-        
-        // Update Parameters
-        state.m = state.m - state.lr * grads.dm;
-        state.b = state.b - state.lr * grads.db;
-        
-        const loss = calculateSSE(state.m, state.b);
+    function planNextStep() {
+        if (state.isConverged) return;
+
+        const grads = calculateGradient(state.targetM, state.targetB);
         const gradNorm = Math.sqrt(grads.dm**2 + grads.db**2);
 
-        state.history.push({ m: state.m, b: state.b, loss: loss });
-        state.epoch++;
-
-        // Update UI
-        document.getElementById('epochDisplay').textContent = state.epoch;
-        document.getElementById('slopeDisplay').textContent = state.m.toFixed(3);
-        document.getElementById('interceptDisplay').textContent = state.b.toFixed(3);
-        document.getElementById('lossDisplay').textContent = loss.toFixed(2);
-        document.getElementById('gradDisplay').textContent = gradNorm.toFixed(3);
-
-        update2DLine();
-        
-        // Stop condition or auto-pause could go here
-        if(gradNorm < 0.01 && state.isRunning) {
-            toggleSimulation(); // Stop if converged
+        if (gradNorm < 0.01) {
+            state.isConverged = true;
+            toggleSimulation(); // Stop
+            return;
         }
+
+        // Record history of the START of the step (where we are now)
+        state.history.push({ 
+            m: state.targetM, 
+            b: state.targetB, 
+            loss: calculateSSE(state.targetM, state.targetB) 
+        });
+
+        // Update Target
+        state.targetM = state.targetM - state.lr * grads.dm;
+        state.targetB = state.targetB - state.lr * grads.db;
+        state.epoch++;
     }
 
-    // ========================================== 
+    // ==========================================
     // 3D ENGINE
-    // ========================================== 
+    // ==========================================
     const canvas = document.getElementById('canvas3d');
     const ctx = canvas.getContext('2d');
 
@@ -406,35 +409,24 @@
         const steps = 40;
         const pts = [];
         
-        // 1. Generate Points
         for (let r = 0; r <= steps; r++) {
             const b = range.b.min + (r / steps) * (range.b.max - range.b.min);
             for (let c = 0; c <= steps; c++) {
                 const m = range.m.min + (c / steps) * (range.m.max - range.m.min);
                 const val = calculateSSE(m, b);
                 pts.push({ m, b, val, r, c });
-                
                 if (val < gridGeometry.minVal) gridGeometry.minVal = val;
                 if (val > gridGeometry.maxVal) gridGeometry.maxVal = val;
             }
         }
 
-        // 2. Normalize Points to [-1, 1] Box for Rendering
-        // We preserve X/Z aspect ratio but scale Y independently
         pts.forEach(p => {
             p.nx = (p.m - range.m.min) / (range.m.max - range.m.min) * 2 - 1;
             p.nz = (p.b - range.b.min) / (range.b.max - range.b.min) * 2 - 1;
-            
-            // Non-linear scaling for Y to make the "bowl" visible even with huge errors
-            // Using a square root or log scale can sometimes help, but let's stick to linear first 
-            // with a cutoff or just simple normalization
             p.ny = ((p.val - gridGeometry.minVal) / (gridGeometry.maxVal - gridGeometry.minVal)) * 1.5 - 0.5;
-            
-            // Color interpolation factor
             p.t = (p.val - gridGeometry.minVal) / (gridGeometry.maxVal - gridGeometry.minVal);
         });
 
-        // 3. Generate Triangles
         const tris = [];
         for (let r = 0; r < steps; r++) {
             for (let c = 0; c < steps; c++) {
@@ -442,8 +434,6 @@
                 const i1 = i0 + 1;
                 const i2 = (r + 1) * (steps + 1) + c;
                 const i3 = i2 + 1;
-                
-                // Two triangles per quad
                 tris.push([i0, i1, i2]);
                 tris.push([i1, i3, i2]);
             }
@@ -454,31 +444,18 @@
     }
 
     function project(x, y, z, width, height) {
-        // Rotation
         const rx = x * Math.cos(camera.rotY) - z * Math.sin(camera.rotY);
         const rz = x * Math.sin(camera.rotY) + z * Math.cos(camera.rotY);
-        
         const ry = y * Math.cos(camera.rotX) - rz * Math.sin(camera.rotX);
         const rz2 = y * Math.sin(camera.rotX) + rz * Math.cos(camera.rotX);
-
-        // Perspective
         const dist = 4.0;
         const scale = Math.min(width, height) * 0.7 * camera.zoom;
         const f = scale / (rz2 + dist);
-
-        return {
-            x: width/2 + rx * f,
-            y: height/2 - ry * f,
-            z: rz2
-        };
+        return { x: width/2 + rx * f, y: height/2 - ry * f, z: rz2 };
     }
 
     function getColor(t) {
-        // Viridis approximation
-        // t is 0..1
-        // Clamp t
         t = Math.max(0, Math.min(1, t));
-        
         let cStart, cEnd, localT;
         if (t < 0.5) {
             cStart = config.colors.low;
@@ -489,7 +466,6 @@
             cEnd = config.colors.high;
             localT = (t - 0.5) * 2;
         }
-
         const r = Math.round(cStart[0] + (cEnd[0] - cStart[0]) * localT);
         const g = Math.round(cStart[1] + (cEnd[1] - cStart[1]) * localT);
         const b = Math.round(cStart[2] + (cEnd[2] - cStart[2]) * localT);
@@ -501,48 +477,35 @@
         const height = canvas.height;
         ctx.clearRect(0, 0, width, height);
 
-        // 1. Project Grid Points
+        // 1. Grid
         const projPoints = gridGeometry.points.map(p => {
             const proj = project(p.nx, p.ny, p.nz, width, height);
             return { ...p, px: proj.x, py: proj.y, pz: proj.z };
         });
 
-        // 2. Sort Triangles (Painters Algorithm)
         const renderList = gridGeometry.triangles.map(tri => {
             const p0 = projPoints[tri[0]];
             const p1 = projPoints[tri[1]];
             const p2 = projPoints[tri[2]];
-            
-            // Average Z for sorting
-            const z = (p0.pz + p1.pz + p2.pz) / 3;
-            // Average T for color
-            const t = (p0.t + p1.t + p2.t) / 3;
-            
-            return { p0, p1, p2, z, t };
+            return { p0, p1, p2, z: (p0.pz + p1.pz + p2.pz) / 3, t: (p0.t + p1.t + p2.t) / 3 };
         }).sort((a, b) => b.z - a.z);
 
-        // 3. Draw Surface
         renderList.forEach(tri => {
             ctx.beginPath();
             ctx.moveTo(tri.p0.px, tri.p0.py);
             ctx.lineTo(tri.p1.px, tri.p1.py);
             ctx.lineTo(tri.p2.px, tri.p2.py);
             ctx.closePath();
-            
             ctx.fillStyle = getColor(tri.t);
             ctx.fill();
-            
-            // Subtle wireframe
             ctx.strokeStyle = "rgba(255,255,255,0.08)";
             ctx.lineWidth = 0.5;
             ctx.stroke();
         });
 
-        // 4. Draw Path & Current Point
+        // 2. Completed Path (Static)
         if (state.history.length > 0) {
             ctx.beginPath();
-            
-            // Map history points to 3D space
             const pathPoints = state.history.map(h => {
                 const nx = (h.m - range.m.min) / (range.m.max - range.m.min) * 2 - 1;
                 const nz = (h.b - range.b.min) / (range.b.max - range.b.min) * 2 - 1;
@@ -550,53 +513,106 @@
                 return project(nx, ny, nz, width, height);
             });
 
-            // Draw line
             if (pathPoints.length > 1) {
                 ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
                 for (let i = 1; i < pathPoints.length; i++) {
                     ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
                 }
-                ctx.strokeStyle = "white";
-                ctx.lineWidth = 2;
-                ctx.stroke();
             }
-
-            // Draw Head
-            const last = pathPoints[pathPoints.length - 1];
+            // Draw line to current Visual Head
+            if (pathPoints.length > 0) {
+                const last = pathPoints[pathPoints.length - 1];
+                ctx.lineTo(last.x, last.y); 
+                // We'll draw the connection to visual head separately
+            }
             
-            // Shadow
-            ctx.beginPath();
-            ctx.arc(last.x, last.y + 10, 4, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(0,0,0,0.2)";
-            ctx.fill();
-
-            // Ball
-            ctx.beginPath();
-            ctx.arc(last.x, last.y, 5, 0, Math.PI*2);
-            ctx.fillStyle = "#ef4444";
-            ctx.fill();
             ctx.strokeStyle = "white";
             ctx.lineWidth = 2;
             ctx.stroke();
         }
+
+        // 3. Current Visual Head (Interpolating)
+        // Project Visual State
+        const vm = state.visualM;
+        const vb = state.visualB;
+        const vLoss = calculateSSE(vm, vb); // Calculate loss for visual point for correct height
+        
+        const vnx = (vm - range.m.min) / (range.m.max - range.m.min) * 2 - 1;
+        const vnz = (vb - range.b.min) / (range.b.max - range.b.min) * 2 - 1;
+        const vny = ((vLoss - gridGeometry.minVal) / (gridGeometry.maxVal - gridGeometry.minVal)) * 1.5 - 0.5;
+        
+        const head = project(vnx, vny, vnz, width, height);
+
+        // Draw line from last history point to visual head
+        if (state.history.length > 0) {
+             const lastH = state.history[state.history.length - 1];
+             const lastNx = (lastH.m - range.m.min) / (range.m.max - range.m.min) * 2 - 1;
+             const lastNz = (lastH.b - range.b.min) / (range.b.max - range.b.min) * 2 - 1;
+             const lastNy = ((lastH.loss - gridGeometry.minVal) / (gridGeometry.maxVal - gridGeometry.minVal)) * 1.5 - 0.5;
+             const lastProj = project(lastNx, lastNy, lastNz, width, height);
+             
+             ctx.beginPath();
+             ctx.moveTo(lastProj.x, lastProj.y);
+             ctx.lineTo(head.x, head.y);
+             ctx.strokeStyle = "white";
+             ctx.lineWidth = 2;
+             ctx.stroke();
+        }
+
+        // Draw Shadow
+        ctx.beginPath();
+        ctx.arc(head.x, head.y + 10, 4, 0, Math.PI*2);
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fill();
+
+        // Draw Ball
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 6, 0, Math.PI*2);
+        ctx.fillStyle = "#ef4444";
+        ctx.fill();
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     function animate() {
+        // Rotation
         if (camera.autoRotate && !camera.isDragging && !state.isRunning) {
             camera.rotY += 0.0005;
         }
+
+        // Smooth Interpolation Logic
+        if (state.isRunning && !state.isConverged) {
+            const dm = state.targetM - state.visualM;
+            const db = state.targetB - state.visualB;
+            const dist = Math.sqrt(dm*dm + db*db);
+
+            if (dist < config.stepThreshold) {
+                // Snap to target and plan next step
+                state.visualM = state.targetM;
+                state.visualB = state.targetB;
+                planNextStep();
+                updateUIValues(); // Update numbers only on step completion
+            } else {
+                // Move visually towards target
+                state.visualM += dm * config.lerpFactor;
+                state.visualB += db * config.lerpFactor;
+                update2DLine(); // Smoothly move 2D line
+            }
+        }
+
         render3D();
         requestAnimationFrame(animate);
     }
 
-    // ========================================== 
+    // ==========================================
     // 2D PLOTLY
-    // ========================================== 
+    // ==========================================
     function init2D() {
         const layout = {
             margin: { t: 20, r: 20, b: 40, l: 40 },
-            xaxis: { title: 'Input (x)', gridcolor: '#f0f0f0' },
-            yaxis: { title: 'Output (y)', gridcolor: '#f0f0f0' },
+            xaxis: { title: 'Input (x)', range: [0, 6], fixedrange: true, gridcolor: '#f0f0f0' },
+            yaxis: { title: 'Output (y)', range: [0, 15], fixedrange: true, gridcolor: '#f0f0f0' },
             showlegend: false,
             plot_bgcolor: 'white',
             paper_bgcolor: 'white',
@@ -613,7 +629,7 @@
 
         const traceLine = {
             x: [0, 6],
-            y: [state.b, state.m * 6 + state.b],
+            y: [state.visualB, state.visualM * 6 + state.visualB],
             mode: 'lines',
             line: { color: '#ef4444', width: 3 },
             type: 'scatter'
@@ -623,73 +639,80 @@
     }
 
     function update2DLine() {
+        // Updates based on VISUAL state (smooth)
         Plotly.restyle('plot2d', {
-            y: [[state.b, state.m * 6 + state.b]]
+            y: [[state.visualB, state.visualM * 6 + state.visualB]]
         }, [1]);
     }
+    
+    function updateUIValues() {
+        const loss = calculateSSE(state.targetM, state.targetB);
+        const grads = calculateGradient(state.targetM, state.targetB);
+        const gradNorm = Math.sqrt(grads.dm**2 + grads.db**2);
+        
+        document.getElementById('epochDisplay').textContent = state.epoch;
+        document.getElementById('slopeDisplay').textContent = state.targetM.toFixed(3);
+        document.getElementById('interceptDisplay').textContent = state.targetB.toFixed(3);
+        document.getElementById('lossDisplay').textContent = loss.toFixed(2);
+        document.getElementById('gradDisplay').textContent = gradNorm.toFixed(3);
+    }
 
-    // ========================================== 
+    // ==========================================
     // SETUP & EVENTS
-    // ========================================== 
+    // ==========================================
     function toggleSimulation() {
         state.isRunning = !state.isRunning;
         const btn = document.getElementById('startBtn');
-        const icon = document.getElementById('playIcon');
         
         if (state.isRunning) {
             btn.innerHTML = `<span id="playIcon">⏸</span> Pause Descent`;
             btn.classList.add('active');
-            camera.autoRotate = false; // Stop rotating so user can watch path
+            camera.autoRotate = false;
             
-            if (!state.intervalId) {
-                state.intervalId = setInterval(stepGradient, config.animationSpeed);
+            // If first start, plan first step immediately
+            if (state.epoch === 0 && state.history.length === 0) {
+                 planNextStep();
             }
         } else {
             btn.innerHTML = `<span id="playIcon">▶</span> Resume Descent`;
             btn.classList.remove('active');
-            clearInterval(state.intervalId);
-            state.intervalId = null;
         }
     }
 
     function resetSimulation() {
         state.isRunning = false;
-        clearInterval(state.intervalId);
-        state.intervalId = null;
+        state.isConverged = false;
         
-        state.m = 0;
-        state.b = 0;
+        // Reset everything
+        state.targetM = 0;
+        state.targetB = 0;
+        state.visualM = 0;
+        state.visualB = 0;
         state.history = [];
         state.epoch = 0;
         
-        // Initial Loss
-        const loss = calculateSSE(state.m, state.b);
-        state.history.push({m: state.m, b: state.b, loss: loss});
-        
+        const loss = calculateSSE(0, 0);
         document.getElementById('startBtn').innerHTML = `<span id="playIcon">▶</span> Start Descent`;
         document.getElementById('epochDisplay').textContent = "0";
         document.getElementById('lossDisplay').textContent = loss.toFixed(2);
-        
-        // Reset View (optional)
-        // camera.rotY = 0.5;
+        document.getElementById('slopeDisplay').textContent = "0.00";
+        document.getElementById('interceptDisplay').textContent = "0.00";
+        document.getElementById('gradDisplay').textContent = "0.00";
         
         update2DLine();
     }
 
     window.onload = function() {
-        // Init logic
         initGrid();
         
-        // Resize Canvas
         const container = document.getElementById('canvasContainer');
         canvas.width = container.clientWidth;
         canvas.height = container.clientHeight;
         
         init2D();
-        resetSimulation(); // Set initial state
+        resetSimulation();
         animate();
 
-        // Listeners
         window.addEventListener('resize', () => {
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
@@ -717,12 +740,9 @@
             if (!camera.isDragging) return;
             const dx = e.clientX - camera.lastMouse.x;
             const dy = e.clientY - camera.lastMouse.y;
-            
             camera.rotY += dx * 0.01;
             camera.rotX += dy * 0.01;
-            // Clamp X rotation
             camera.rotX = Math.max(-1.5, Math.min(1.5, camera.rotX));
-            
             camera.lastMouse = { x: e.clientX, y: e.clientY };
         });
 
@@ -733,6 +753,5 @@
         }, { passive: false });
     };
 </script>
-
 </body>
 </html>
