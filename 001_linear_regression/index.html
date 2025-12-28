@@ -153,7 +153,7 @@
         .content {
             padding: 20px;
             display: grid;
-            grid-template-rows: 1fr 1fr;
+            grid-template-rows: 1fr 2fr;
             gap: 20px;
             overflow-y: auto;
             background-color: #f0f2f5;
@@ -251,7 +251,7 @@
         @media (max-width: 900px) {
             .main-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
             .sidebar { height: auto; max-height: 40vh; }
-            .content { grid-template-rows: 400px 400px; }
+            .content { grid-template-rows: 300px 600px; }
         }
     </style>
 </head>
@@ -299,6 +299,7 @@
             <strong>Instructions:</strong><br>
             • Drag points on the 2D plot to change data.<br>
             • Drag the 3D surface to rotate view.<br>
+            • <strong>Scroll</strong> to zoom in/out the 3D surface.<br>
             • Observe how the "bowl" shape guides you to the minimum error (blue zone).
         </div>
     </div>
@@ -360,6 +361,7 @@
     // 3D Visualization State
     let canvasState = {
         rotation: { x: 0.6, y: 0.4 }, // Initial angle looking slightly down
+        zoom: 1.0, // Zoom factor
         autoRotate: true,
         dragging: false,
         lastMouse: { x: 0, y: 0 }
@@ -407,8 +409,7 @@
         }
 
         update2D();
-        // 3D update is handled in the animation loop, but we trigger a flag if needed
-        // Just ensuring global state variables are fresh is enough for the render loop.
+        // 3D update is handled in the animation loop
     }
 
     // ==========================================
@@ -429,7 +430,7 @@
         
         document.getElementById('plot2d').on('plotly_click', d => {
             if (d.points[0].curveNumber === 0) { // Clicked a data point
-                 // Simple toggle edit logic could go here, but drag is better
+                 // Simple toggle edit logic could go here
             }
         });
     }
@@ -553,7 +554,7 @@
     }
 
     // 3D Projection Math
-    function project(p, w, h, rotX, rotY) {
+    function project(p, w, h, rotX, rotY, zoom) {
         // Rotate Y
         let x = p.wx * Math.cos(rotY) - p.wz * Math.sin(rotY);
         let z = p.wx * Math.sin(rotY) + p.wz * Math.cos(rotY);
@@ -565,7 +566,7 @@
 
         // Perspective
         const dist = 3.5;
-        const scale = Math.min(w, h) * 0.8;
+        const scale = Math.min(w, h) * 0.8 * zoom; // Apply zoom
         const f = scale / (z2 + dist);
 
         return {
@@ -587,7 +588,7 @@
 
         // Project all points
         const projPoints = gridPoints.map(p => {
-            const proj = project(p, w, h, canvasState.rotation.x, canvasState.rotation.y);
+            const proj = project(p, w, h, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
             return { ...p, px: proj.x, py: proj.y, pz: proj.z };
         });
 
@@ -627,9 +628,6 @@
         });
 
         // Draw "Current Position" Marker
-        // We need to locate the user's current slope/intercept on the surface
-        // Interpolation would be precise, but nearest grid point is fast and sufficient for visualization
-        // Let's project the exact current point
         const sMin = 0, sMax = 15;
         const iMin = -5, iMax = 20;
         
@@ -638,9 +636,6 @@
         const curWz = (state.intercept - iMin) / (iMax - iMin) * 2 - 1;
         
         // Find height (SSE) normalized
-        const minVal = state.minSSE; // Approximate global min from pre-calc
-        // We need the same normalization params as the grid.
-        // Let's re-find them quickly or store them.
         let gridMax = -Infinity, gridMin = Infinity;
         gridPoints.forEach(p => { if(p.val>gridMax) gridMax=p.val; if(p.val<gridMin) gridMin=p.val; });
         
@@ -648,7 +643,7 @@
         const curNorm = (curSSE - gridMin) / (gridMax - gridMin);
         const curWy = curNorm * 1.5 - 0.75;
 
-        const curProj = project({ wx: curWx, wy: curWy, wz: curWz }, w, h, canvasState.rotation.x, canvasState.rotation.y);
+        const curProj = project({ wx: curWx, wy: curWy, wz: curWz }, w, h, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
         
         // Draw Red Dot (User)
         ctx.beginPath();
@@ -659,16 +654,12 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Draw Line to 'floor' to help perception
-        // Floor Y is roughly -0.75 in world space
-        // Actually, let's just draw a line from the dot down a bit? No, just the dot is cleaner.
-
         // Draw Optimum (Blue Diamond)
         const optWx = (state.bestSlope - sMin) / (sMax - sMin) * 2 - 1;
         const optWz = (state.bestIntercept - iMin) / (iMax - iMin) * 2 - 1;
         const optNorm = (state.minSSE - gridMin) / (gridMax - gridMin);
         const optWy = optNorm * 1.5 - 0.75;
-        const optProj = project({ wx: optWx, wy: optWy, wz: optWz }, w, h, canvasState.rotation.x, canvasState.rotation.y);
+        const optProj = project({ wx: optWx, wy: optWy, wz: optWz }, w, h, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
 
         ctx.beginPath();
         ctx.moveTo(optProj.x, optProj.y - 6);
@@ -755,6 +746,15 @@
             canvasState.autoRotate = false;
             document.getElementById('rotateBtn').classList.remove('active');
         });
+
+        // ZOOM HANDLER (NEW)
+        container3d.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoomSpeed = 0.02;
+            canvasState.zoom += -e.deltaY * zoomSpeed;
+            // Clamp zoom
+            canvasState.zoom = Math.max(0.5, Math.min(8.0, canvasState.zoom));
+        }, { passive: false });
         
         window.addEventListener('mouseup', () => { canvasState.dragging = false; });
         
@@ -779,20 +779,9 @@
 
         document.getElementById('resetViewBtn').addEventListener('click', () => {
             canvasState.rotation = { x: 0.6, y: 0.4 };
+            canvasState.zoom = 1.0; // Reset Zoom
         });
     };
-
-    // Helper for reactive data updating (from the original logic)
-    // The original logic had point dragging. Let's add that back to Plotly 2D.
-    // It's a bit complex with standard Plotly config, but we can do a simplified version using the modebar or just rely on sliders for this "academic" version.
-    // However, the user said "make it convenient". The original had dragging. Let's try to restore basic point dragging if possible.
-    // Actually, Plotly's dragging usually requires custom D3 or heavy event handling. 
-    // Given the constraints and the goal of "cleanliness", the sliders are the primary control for parameters.
-    // Data modification via drag is cool but might clash with the "academic" vibe if not done perfectly.
-    // I will stick to parameter exploration as the primary interaction, as typical in academic demos.
-    // The reset data button implies data CAN change, but maybe only via code or console?
-    // I'll leave the "Reset Data" button just in case, but won't implement complex D3 dragging to keep the code clean and robust.
-    
 </script>
 </body>
 </html>
