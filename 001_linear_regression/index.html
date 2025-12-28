@@ -332,6 +332,10 @@
             </div>
             <div class="canvas-container" id="container3dRaw">
                 <canvas id="canvas3dRaw"></canvas>
+                <div class="viz-controls">
+                    <button class="icon-btn" id="rotateBtnRaw" title="Auto Rotate">⏯</button>
+                    <button class="icon-btn" id="resetViewBtnRaw" title="Reset View">⟲</button>
+                </div>
             </div>
         </div>
     </div>
@@ -680,6 +684,8 @@
     function renderScene(context, canvasWidth, canvasHeight, isRaw) {
         context.clearRect(0, 0, canvasWidth, canvasHeight);
 
+        const currentZoom = isRaw ? canvasState.zoom * 0.45 : canvasState.zoom;
+
         // 1. Project Points
         const projPoints = gridPoints.map(p => {
             // Choose source coords
@@ -687,7 +693,7 @@
             const Y = isRaw ? p.ry : p.wy;
             const Z = isRaw ? p.rz : p.wz;
             
-            const proj = project(X, Y, Z, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
+            const proj = project(X, Y, Z, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
             return { ...p, px: proj.x, py: proj.y, pz: proj.z };
         });
 
@@ -739,7 +745,7 @@
             curY = curNorm * 1.5 - 0.75;
         }
 
-        const curProj = project(curX, curY, curZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
+        const curProj = project(curX, curY, curZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
         
         context.beginPath();
         context.arc(curProj.x, curProj.y, 6, 0, Math.PI * 2);
@@ -762,7 +768,7 @@
             optY = optNorm * 1.5 - 0.75;
         }
 
-        const optProj = project(optX, optY, optZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, canvasState.zoom);
+        const optProj = project(optX, optY, optZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
 
         context.beginPath();
         context.moveTo(optProj.x, optProj.y - 6);
@@ -882,10 +888,21 @@
         document.getElementById('rotateBtn').addEventListener('click', function() {
             canvasState.autoRotate = !canvasState.autoRotate;
             this.classList.toggle('active', canvasState.autoRotate);
+            document.getElementById('rotateBtnRaw').classList.toggle('active', canvasState.autoRotate);
+        });
+        document.getElementById('rotateBtnRaw').addEventListener('click', function() {
+            canvasState.autoRotate = !canvasState.autoRotate;
+            this.classList.toggle('active', canvasState.autoRotate);
+            document.getElementById('rotateBtn').classList.toggle('active', canvasState.autoRotate);
         });
         document.getElementById('rotateBtn').classList.add('active');
+        document.getElementById('rotateBtnRaw').classList.add('active');
 
         document.getElementById('resetViewBtn').addEventListener('click', () => {
+            canvasState.rotation = { x: 0.6, y: 0.4 };
+            canvasState.zoom = 1.0;
+        });
+        document.getElementById('resetViewBtnRaw').addEventListener('click', () => {
             canvasState.rotation = { x: 0.6, y: 0.4 };
             canvasState.zoom = 1.0;
         });
