@@ -418,8 +418,9 @@
     function init2D() {
         const layout = {
             margin: { t: 20, r: 20, b: 40, l: 40 },
-            xaxis: { title: 'X', range: [0, 4], gridcolor: '#eee' },
-            yaxis: { title: 'Y', range: [0, 40], gridcolor: '#eee' },
+            xaxis: { title: 'X', range: [0, 4], gridcolor: '#eee', fixedrange: true },
+            yaxis: { title: 'Y', range: [0, 40], gridcolor: '#eee', fixedrange: true },
+            dragmode: false,
             showlegend: false,
             hovermode: 'closest',
             plot_bgcolor: 'white',
