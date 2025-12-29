@@ -382,8 +382,8 @@
 
     // 3D Visualization State (Shared between both plots)
     let canvasState = {
-        rotation: { x: 0.6, y: 0.4 }, 
-        zoom: 1.0, 
+        rotation: { x: -0.540, y: -0.644 },
+        zoom: 2.196,
         autoRotate: true,
         dragging: false,
         lastMouse: { x: 0, y: 0 }
@@ -680,23 +680,19 @@
     }
 
     function generateGrid() {
-        const steps = 25; 
-        
+        const steps = 30; // Higher resolution (same as 001)
+
         // We iterate over A (quadratic) and B (linear). C is fixed.
         const aMin = rangeConfig.a.min, aMax = rangeConfig.a.max;
         const bMin = rangeConfig.b.min, bMax = rangeConfig.b.max;
-        
-        // Visualization scaling for Raw view
-        const scaleA = 2.0; // Scale factor for A axis
-        const scaleB = 0.5; // Scale factor for B axis
-        
+
         gridPoints = [];
-        
+
         for (let r = 0; r <= steps; r++) {
             const bVal = bMin + (bMax - bMin) * (r / steps);
             for (let c = 0; c <= steps; c++) {
                 const aVal = aMin + (aMax - aMin) * (c / steps);
-                
+
                 // Calculate SSE using the GRID a/b but CURRENT slider c
                 const val = calculateSSE(aVal, bVal, state.c, data.x, data.y);
                 gridPoints.push({ a: aVal, b: bVal, val, r, c });
@@ -712,21 +708,18 @@
         // Compute Coordinates
         gridPoints.forEach(p => {
             // NORMALIZED COORDS (Unit Cube)
-            // x -> a, z -> b
-            p.wx = (p.a - aMin) / (aMax - aMin) * 2 - 1; 
-            p.wz = (p.b - bMin) / (bMax - bMin) * 2 - 1; 
-            
-            let norm = (p.val - minVal) / (Math.max(1, maxVal - minVal)); 
-            p.wy = norm * 1.5 - 0.75; 
+            p.wx = (p.a - aMin) / (aMax - aMin) * 2 - 1;
+            p.wz = (p.b - bMin) / (bMax - bMin) * 2 - 1;
+
+            let norm = (p.val - minVal) / (Math.max(1, maxVal - minVal));
+            p.wy = norm * 1.5 - 0.75;
             p.colorT = norm;
 
-            // RAW COORDS
-            const midA = (aMax + aMin) / 2;
-            const midB = (bMax + bMin) / 2;
-            
-            p.rx = (p.a - midA) * scaleA;      
-            p.rz = (p.b - midB) * scaleB;  
-            p.ry = (p.val - minVal) * 0.002 - 0.5; // Scale height
+            // RAW COORDS (Scaled by 0.35 to fit engine - same pattern as 001)
+            const scale = 0.35;
+            p.rx = ((p.a - aMin) / (aMax - aMin) * 10 - 5) * scale;
+            p.rz = ((p.b - bMin) / (bMax - bMin) * 10 - 5) * scale;
+            p.ry = (Math.min(p.val * 0.02, 7) - 2) * scale;
         });
 
         triangles = [];
@@ -768,7 +761,7 @@
     function renderScene(context, canvasWidth, canvasHeight, isRaw) {
         context.clearRect(0, 0, canvasWidth, canvasHeight);
 
-        const currentZoom = isRaw ? canvasState.zoom * 0.1 : canvasState.zoom;
+        const currentZoom = isRaw ? canvasState.zoom * 0.45 : canvasState.zoom;
 
         // 1. Project Points
         const projPoints = gridPoints.map(p => {
@@ -807,10 +800,6 @@
         // 4. Draw Markers
         const aMin = rangeConfig.a.min, aMax = rangeConfig.a.max;
         const bMin = rangeConfig.b.min, bMax = rangeConfig.b.max;
-        const midA = (aMax + aMin) / 2;
-        const midB = (bMax + bMin) / 2;
-        const scaleA = 2.0;
-        const scaleB = 0.5;
 
         // Global Grid Min/Max for correct height normalization
         let gridMax = -Infinity, gridMin = Infinity;
@@ -818,75 +807,62 @@
 
         // --- Current Marker (A, B) ---
         let curX, curY, curZ;
-        const curSSE = state.sse; // Calculated with current C
-        // Note: The surface is generated with current C, so this marker should lie ON the surface if A,B matches a grid point.
-        
-        // Clamp height for display safety
+        const curSSE = state.sse;
         const curNorm = (curSSE - gridMin) / (Math.max(1, gridMax - gridMin));
 
         if (isRaw) {
-            curX = (state.a - midA) * scaleA;
-            curZ = (state.b - midB) * scaleB;
-            curY = (curSSE - gridMin) * 0.002 - 0.5;
+            // Raw Logic - must use same scale as surface (0.35)
+            const scale = 0.35;
+            curX = ((state.a - aMin) / (aMax - aMin) * 10 - 5) * scale;
+            curZ = ((state.b - bMin) / (bMax - bMin) * 10 - 5) * scale;
+            curY = (Math.min(curSSE * 0.02, 7) - 2) * scale;
         } else {
             curX = (state.a - aMin) / (aMax - aMin) * 2 - 1;
             curZ = (state.b - bMin) / (bMax - bMin) * 2 - 1;
             curY = curNorm * 1.5 - 0.75;
         }
-        
-        // Only draw if within bounds approximately
-        if(state.a >= aMin && state.a <= aMax && state.b >= bMin && state.b <= bMax) {
-            const curProj = project(curX, curY, curZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
-            context.beginPath();
-            context.arc(curProj.x, curProj.y, 6, 0, Math.PI * 2);
-            context.fillStyle = "#e74c3c"; 
-            context.fill();
-            context.strokeStyle = "white"; 
-            context.lineWidth = 2; context.stroke();
-        }
+
+        const curProj = project(curX, curY, curZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
+        context.beginPath();
+        context.arc(curProj.x, curProj.y, 6, 0, Math.PI * 2);
+        context.fillStyle = "#e74c3c";
+        context.fill();
+        context.strokeStyle = "white";
+        context.lineWidth = 2; context.stroke();
 
         // --- Optimal Marker ---
-        // This is tricky because the global optimum (Best A, Best B, Best C) might not be on the current surface (which assumes C = state.c).
-        // If we want to show where the global optimum 'A' and 'B' are, we can, but the height might be wrong relative to the surface (because surface is slice at C).
-        // We will draw it anyway to show the "Target" A/B on the plane.
-        
-        // Calculate SSE of BestA, BestB using CURRENT C to place it on the visual surface?
-        // Or show true MinSSE (which might be below the surface)?
-        // Let's show it projected onto the current surface for visual clarity (BestA, BestB, SSE(BestA, BestB, CurrentC)).
-        // This helps the user see "I need to move my red dot to the blue dot".
-        
         const optValOnSurface = calculateSSE(state.bestA, state.bestB, state.c, data.x, data.y);
         const optNorm = (optValOnSurface - gridMin) / (Math.max(1, gridMax - gridMin));
 
         let optX, optY, optZ;
         if (isRaw) {
-            optX = (state.bestA - midA) * scaleA;
-            optZ = (state.bestB - midB) * scaleB;
-            optY = (optValOnSurface - gridMin) * 0.002 - 0.5;
+            // Raw Logic - must use same scale as surface (0.35)
+            const scaleOpt = 0.35;
+            optX = ((state.bestA - aMin) / (aMax - aMin) * 10 - 5) * scaleOpt;
+            optZ = ((state.bestB - bMin) / (bMax - bMin) * 10 - 5) * scaleOpt;
+            optY = (Math.min(optValOnSurface * 0.02, 7) - 2) * scaleOpt;
         } else {
             optX = (state.bestA - aMin) / (aMax - aMin) * 2 - 1;
             optZ = (state.bestB - bMin) / (bMax - bMin) * 2 - 1;
             optY = optNorm * 1.5 - 0.75;
         }
 
-        if(state.bestA >= aMin && state.bestA <= aMax && state.bestB >= bMin && state.bestB <= bMax) {
-            const optProj = project(optX, optY, optZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
-            context.beginPath();
-            context.moveTo(optProj.x, optProj.y - 6);
-            context.lineTo(optProj.x + 6, optProj.y);
-            context.lineTo(optProj.x, optProj.y + 6);
-            context.lineTo(optProj.x - 6, optProj.y);
-            context.closePath();
-            context.fillStyle = "#3498db";
-            context.fill();
-            context.strokeStyle = "white"; 
-            context.lineWidth = 2; context.stroke();
-        }
+        const optProj = project(optX, optY, optZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
+        context.beginPath();
+        context.moveTo(optProj.x, optProj.y - 6);
+        context.lineTo(optProj.x + 6, optProj.y);
+        context.lineTo(optProj.x, optProj.y + 6);
+        context.lineTo(optProj.x - 6, optProj.y);
+        context.closePath();
+        context.fillStyle = "#3498db";
+        context.fill();
+        context.strokeStyle = "white";
+        context.lineWidth = 2; context.stroke();
     }
 
     function drawLoop() {
         if (canvasState.autoRotate) {
-            canvasState.rotation.y += 0.005;
+            canvasState.rotation.y += 0.0005;
         }
 
         renderScene(ctx, canvas.width, canvas.height, false);
@@ -975,7 +951,12 @@
         setupControls(document.getElementById('container3d'));
         setupControls(document.getElementById('container3dRaw'));
         
-        window.addEventListener('mouseup', () => { canvasState.dragging = false; });
+        window.addEventListener('mouseup', () => {
+            canvasState.dragging = false;
+            canvasState.autoRotate = true;
+            document.getElementById('rotateBtn').classList.add('active');
+            document.getElementById('rotateBtnRaw').classList.add('active');
+        });
         
         window.addEventListener('mousemove', e => {
             if (!canvasState.dragging) return;
@@ -1001,12 +982,12 @@
         document.getElementById('rotateBtnRaw').classList.add('active');
 
         document.getElementById('resetViewBtn').addEventListener('click', () => {
-            canvasState.rotation = { x: 0.6, y: 0.4 };
-            canvasState.zoom = 1.0;
+            canvasState.rotation = { x: -0.540, y: -0.644 };
+            canvasState.zoom = 2.196;
         });
         document.getElementById('resetViewBtnRaw').addEventListener('click', () => {
-            canvasState.rotation = { x: 0.6, y: 0.4 };
-            canvasState.zoom = 1.0;
+            canvasState.rotation = { x: -0.540, y: -0.644 };
+            canvasState.zoom = 2.196;
         });
     };
 </script>
