@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression: MSE Landscape</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: 100vh;
+        }
+
+        /* Sidebar Controls */
+        .sidebar {
+            background: var(--card-bg);
+            padding: 25px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+            color: var(--text-color);
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            margin: 0 0 20px 0;
+            line-height: 1.4;
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            border: 1px solid #eee;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .value-badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--accent-color);
+        }
+
+        .stat-box {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #e74c3c;
+            font-family: monospace;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .equation {
+            font-family: monospace;
+            text-align: center;
+            color: var(--accent-color);
+            font-weight: 600;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .formula-note {
+            font-size: 0.7rem;
+            color: #95a5a6;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        button:hover { opacity: 0.9; }
+
+        /* Content Area */
+        .content {
+            padding: 20px;
+            display: grid;
+            grid-template-rows: 450px 600px 600px; /* 3 rows */
+            gap: 20px;
+            overflow-y: auto;
+            background-color: #f0f2f5;
+        }
+
+        @media (max-width: 900px) {
+            .main-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .sidebar { height: auto; max-height: 40vh; }
+            .content { grid-template-rows: 400px 500px 500px; }
+        }
+
+        .viz-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viz-header {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            z-index: 5;
+            pointer-events: none;
+            background: rgba(255,255,255,0.8);
+            padding: 5px 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+        }
+
+        .viz-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .viz-desc {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            margin-top: 2px;
+        }
+
+        /* 2D Plotly Container */
+        #plot2d {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 3D Canvas Container */
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #eef2f3; /* Neutral background */
+            cursor: move;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viz-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+        }
+
+        .icon-btn {
+            background: white;
+            border: 1px solid #ddd;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .icon-btn:hover { color: var(--accent-color); }
+        .icon-btn.active { color: var(--accent-color); border-color: var(--accent-color); }
+
+    </style>
+</head>
+<body>
+
+<div class="main-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div>
+            <h1>Linear Regression (MSE)</h1>
+            <div class="subtitle">Interactive optimization explorer</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-value" id="mseDisplay">0.00</div>
+            <div class="stat-label">Mean Squared Error (MSE)</div>
+            <div class="equation" id="equation">y = ax + b</div>
+        </div>
+
+        <div class="control-panel">
+            <div class="control-group">
+                <label>
+                    Slope (a)
+                    <span class="value-badge" id="slopeValue">0.0</span>
+                </label>
+                <input type="range" id="slopeSlider" min="0" max="15" step="0.1">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Intercept (b)
+                    <span class="value-badge" id="interceptValue">0.0</span>
+                </label>
+                <input type="range" id="interceptSlider" min="-5" max="20" step="0.1">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-primary" id="optimizeBtn">Find Minimum</button>
+            <button class="btn-secondary" id="resetBtn">Reset</button>
+        </div>
+
+        <div style="font-size: 0.75rem; color: #999; margin-top: 10px; line-height: 1.5;">
+            <strong>Instructions:</strong><br>
+            * Drag points on the 2D plot to change data.<br>
+            * Drag the 3D surface to rotate view.<br>
+            * <strong>Scroll</strong> to zoom in/out.<br>
+            * Compare the normalized vs raw geometry.
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <!-- 2D Graph -->
+        <div class="viz-card">
+            <div class="viz-header">
+                <div class="viz-title">Data & Model</div>
+            </div>
+            <div id="plot2d"></div>
+        </div>
+
+        <!-- 3D Graph (Normalized) -->
+        <div class="viz-card">
+            <div class="viz-header">
+                <div class="viz-title">Normalized Loss Landscape</div>
+                <div class="viz-desc">Symmetric "bowl" for intuition</div>
+            </div>
+            <div class="canvas-container" id="container3d">
+                <canvas id="canvas3d"></canvas>
+                <div class="viz-controls">
+                    <button class="icon-btn" id="rotateBtn" title="Auto Rotate">&#9199;</button>
+                    <button class="icon-btn" id="resetViewBtn" title="Reset View">&#10226;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Graph (Raw) -->
+        <div class="viz-card">
+            <div class="viz-header">
+                <div class="viz-title">Raw Loss Surface</div>
+                <div class="viz-desc">True geometry of MSE (asymmetric)</div>
+            </div>
+            <div class="canvas-container" id="container3dRaw">
+                <canvas id="canvas3dRaw"></canvas>
+                <div class="viz-controls">
+                    <button class="icon-btn" id="rotateBtnRaw" title="Auto Rotate">&#9199;</button>
+                    <button class="icon-btn" id="resetViewBtnRaw" title="Reset View">&#10226;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // DATA & STATE
+    // ==========================================
+    const originalData = {
+        x: [1, 1.5, 2, 2.3, 2.5, 2.7, 2.8, 3, 3.2, 3.5],
+        y: [10, 15, 18, 22, 23, 26, 25, 30, 31, 33]
+    };
+
+    let data = { x: [...originalData.x], y: [...originalData.y] };
+
+    // Optimization ranges
+    const rangeConfig = {
+        slope: { min: 0, max: 15, step: 0.5 },
+        intercept: { min: -5, max: 20, step: 0.5 }
+    };
+
+    let state = {
+        slope: 6.5,
+        intercept: 3.5,
+        mse: 0,
+        bestSlope: 0,
+        bestIntercept: 0,
+        minMSE: Infinity,
+        editMode: false,
+        selectedPoint: null
+    };
+
+    // 3D Visualization State (Shared between both plots)
+    let canvasState = {
+        rotation: { x: -0.540, y: -0.644 },
+        zoom: 2.196,
+        autoRotate: true,
+        dragging: false,
+        lastMouse: { x: 0, y: 0 }
+    };
+
+    // ==========================================
+    // CORE LOGIC
+    // ==========================================
+    function calculateMSE(s, i, dx, dy) {
+        let error = 0;
+        for (let k = 0; k < dx.length; k++) {
+            error += Math.pow(dy[k] - (s * dx[k] + i), 2);
+        }
+        return error / dx.length; // MSE = SSE / n
+    }
+
+    function findOptimum() {
+        let minE = Infinity;
+        let bestS = 0;
+        let bestI = 0;
+        for (let s = rangeConfig.slope.min; s <= rangeConfig.slope.max; s += 0.1) {
+            for (let i = rangeConfig.intercept.min; i <= rangeConfig.intercept.max; i += 0.1) {
+                const e = calculateMSE(s, i, data.x, data.y);
+                if (e < minE) { minE = e; bestS = s; bestI = i; }
+            }
+        }
+        state.bestSlope = bestS;
+        state.bestIntercept = bestI;
+        state.minMSE = minE;
+    }
+
+    function updateState(updateSliders = false) {
+        state.mse = calculateMSE(state.slope, state.intercept, data.x, data.y);
+
+        document.getElementById('mseDisplay').textContent = state.mse.toFixed(2);
+        document.getElementById('equation').textContent = `y = ${state.slope.toFixed(2)}x + ${state.intercept.toFixed(2)}`;
+        document.getElementById('slopeValue').textContent = state.slope.toFixed(2);
+        document.getElementById('interceptValue').textContent = state.intercept.toFixed(2);
+
+        if (updateSliders) {
+            document.getElementById('slopeSlider').value = state.slope;
+            document.getElementById('interceptSlider').value = state.intercept;
+        }
+
+        update2D();
+        // 3D updates handle themselves in the animation loop
+    }
+
+    // ==========================================
+    // 2D PLOTLY
+    // ==========================================
+    function init2D() {
+        const layout = {
+            margin: { t: 20, r: 20, b: 40, l: 40 },
+            xaxis: { title: 'X', range: [0, 4], gridcolor: '#eee', fixedrange: true },
+            yaxis: { title: 'Y', range: [0, 40], gridcolor: '#eee', fixedrange: true },
+            dragmode: false,
+            showlegend: false,
+            hovermode: 'closest',
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white'
+        };
+
+        const pointsTrace = {
+            x: data.x,
+            y: data.y,
+            mode: 'markers',
+            marker: { color: '#2980b9', size: 15, line: { color: 'white', width: 2 } },
+            type: 'scatter',
+            hoverinfo: 'x+y'
+        };
+
+        const regressionLine = {
+            x: [0, 4],
+            y: [state.intercept, state.slope * 4 + state.intercept],
+            mode: 'lines',
+            line: { color: '#e74c3c', width: 3 },
+            hoverinfo: 'skip'
+        };
+
+        // Initialize Residual Lines (placeholders)
+        const residualTraces = data.x.map(() => ({
+            x: [0, 0],
+            y: [0, 0],
+            mode: 'lines',
+            line: { color: 'rgba(231, 76, 60, 0.4)', width: 1, dash: 'dash' },
+            hoverinfo: 'skip',
+            type: 'scatter'
+        }));
+
+        Plotly.newPlot('plot2d', [pointsTrace, regressionLine, ...residualTraces], layout, {
+            responsive: true,
+            displayModeBar: false
+        });
+
+        // ... event listeners ...
+        const plotEl = document.getElementById('plot2d');
+        let hoveredPointIndex = null;
+        let dragPointIndex = null;
+
+        plotEl.on('plotly_hover', function(data) {
+            if (dragPointIndex === null && data.points && data.points.length > 0 && data.points[0].curveNumber === 0) {
+                hoveredPointIndex = data.points[0].pointIndex;
+                plotEl.style.cursor = 'pointer';
+            }
+        });
+
+        plotEl.on('plotly_unhover', function() {
+            if (dragPointIndex === null) {
+                hoveredPointIndex = null;
+                plotEl.style.cursor = '';
+            }
+        });
+
+        plotEl.addEventListener('mousedown', function(e) {
+            if (hoveredPointIndex !== null) {
+                dragPointIndex = hoveredPointIndex;
+                plotEl.style.cursor = 'grabbing';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('mousemove', function(e) {
+            if (dragPointIndex === null) return;
+
+            const rect = plotEl.getBoundingClientRect();
+            const fullLayout = plotEl._fullLayout;
+            const xaxis = fullLayout.xaxis;
+            const yaxis = fullLayout.yaxis;
+
+            const xPixel = e.clientX - rect.left - xaxis._offset;
+            const yPixel = e.clientY - rect.top - yaxis._offset;
+
+            let newX = xaxis.range[0] + (xPixel / xaxis._length) * (xaxis.range[1] - xaxis.range[0]);
+            let newY = yaxis.range[1] - (yPixel / yaxis._length) * (yaxis.range[1] - yaxis.range[0]);
+
+            newX = Math.max(0, Math.min(4, newX));
+            newY = Math.max(0, Math.min(40, newY));
+
+            data.x[dragPointIndex] = newX;
+            data.y[dragPointIndex] = newY;
+
+            // Update points trace [0]
+            Plotly.restyle('plot2d', { x: [data.x], y: [data.y] }, [0]);
+
+            findOptimum();
+            generateGrid();
+            updateState();
+        });
+
+        window.addEventListener('mouseup', function() {
+            if (dragPointIndex !== null) {
+                dragPointIndex = null;
+                plotEl.style.cursor = '';
+                document.body.style.userSelect = '';
+                hoveredPointIndex = null;
+            }
+        });
+
+        // Initial draw of residuals
+        update2D();
+    }
+
+    function update2D() {
+        const yStart = state.intercept;
+        const yEnd = state.slope * 4 + state.intercept;
+
+        // Update Regression Line (Trace 1)
+        Plotly.restyle('plot2d', {
+            x: [[0, 4]],
+            y: [[yStart, yEnd]]
+        }, [1]);
+
+        // Update Residual Lines (Traces 2 to N+2)
+        const xUpdates = [];
+        const yUpdates = [];
+        const indices = [];
+
+        for(let i=0; i<data.x.length; i++) {
+            const pred = state.slope * data.x[i] + state.intercept;
+            xUpdates.push([data.x[i], data.x[i]]);
+            yUpdates.push([data.y[i], pred]);
+            indices.push(i + 2);
+        }
+
+        Plotly.restyle('plot2d', {
+            x: xUpdates,
+            y: yUpdates
+        }, indices);
+    }
+
+    // ==========================================
+    // 3D ENGINE (Supports Multiple Canvases)
+    // ==========================================
+    const canvas = document.getElementById('canvas3d');
+    const ctx = canvas.getContext('2d');
+
+    const canvasRaw = document.getElementById('canvas3dRaw');
+    const ctxRaw = canvasRaw.getContext('2d');
+
+    let gridPoints = [];
+    let triangles = [];
+
+    function getViridisColor(t) {
+        const c0 = [68, 1, 84];
+        const c1 = [59, 82, 139];
+        const c2 = [33, 145, 140];
+        const c3 = [94, 201, 98];
+        const c4 = [253, 231, 37];
+
+        let cStart, cEnd, localT;
+        if (t < 0.25) { cStart = c0; cEnd = c1; localT = t / 0.25; }
+        else if (t < 0.5) { cStart = c1; cEnd = c2; localT = (t - 0.25) / 0.25; }
+        else if (t < 0.75) { cStart = c2; cEnd = c3; localT = (t - 0.5) / 0.25; }
+        else { cStart = c3; cEnd = c4; localT = (t - 0.75) / 0.25; }
+
+        const r = Math.round(cStart[0] + (cEnd[0] - cStart[0]) * localT);
+        const g = Math.round(cStart[1] + (cEnd[1] - cStart[1]) * localT);
+        const b = Math.round(cStart[2] + (cEnd[2] - cStart[2]) * localT);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function generateGrid() {
+        const steps = 30; // Higher resolution
+        const sMin = 0, sMax = 15;
+        const iMin = -5, iMax = 20;
+
+        // Define aspect scales for RAW view
+        // We want to map Slope(15 units) and Intercept(25 units) to relative sizes.
+        // Let's assume 1 world unit = 10 data units.
+        const scaleWorld = 0.15;
+
+        gridPoints = [];
+
+        for (let r = 0; r <= steps; r++) {
+            const intercept = iMin + (iMax - iMin) * (r / steps);
+            for (let c = 0; c <= steps; c++) {
+                const slope = sMin + (sMax - sMin) * (c / steps);
+                const val = calculateMSE(slope, intercept, data.x, data.y);
+                gridPoints.push({ slope, intercept, val, r, c });
+            }
+        }
+
+        let maxVal = 0, minVal = Infinity;
+        gridPoints.forEach(p => {
+            if (p.val > maxVal) maxVal = p.val;
+            if (p.val < minVal) minVal = p.val;
+        });
+
+        // Compute Coordinates
+        gridPoints.forEach(p => {
+            // NORMALIZED COORDS (Unit Cube-ish)
+            p.wx = (p.slope - sMin) / (sMax - sMin) * 2 - 1;
+            p.wz = (p.intercept - iMin) / (iMax - iMin) * 2 - 1;
+            let norm = (p.val - minVal) / (maxVal - minVal);
+            p.wy = norm * 1.5 - 0.75;
+            p.colorT = norm;
+
+            // RAW COORDS (Scaled by 0.35 to fit engine)
+            // Using same coefficient as SSE (0.02) - MSE surface will be flatter
+            // because MSE values are ~10x smaller than SSE
+            const scale = 0.35;
+            p.rx = ((p.slope / 15) * 10 - 5) * scale;
+            p.rz = (((p.intercept + 5) / 25) * 10 - 5) * scale;
+            p.ry = (Math.min(p.val * 0.02, 7) - 2) * scale;
+        });
+
+        triangles = [];
+        for (let r = 0; r < steps; r++) {
+            for (let c = 0; c < steps; c++) {
+                const i0 = r * (steps + 1) + c;
+                const i1 = i0 + 1;
+                const i2 = (r + 1) * (steps + 1) + c;
+                const i3 = i2 + 1;
+                triangles.push([i0, i1, i2]);
+                triangles.push([i1, i3, i2]);
+            }
+        }
+    }
+
+    function project(x, y, z, w, h, rotX, rotY, zoom) {
+        // Rotate Y
+        let px = x * Math.cos(rotY) - z * Math.sin(rotY);
+        let pz = x * Math.sin(rotY) + z * Math.cos(rotY);
+        let py = y;
+
+        // Rotate X
+        let py2 = py * Math.cos(rotX) - pz * Math.sin(rotX);
+        let pz2 = py * Math.sin(rotX) + pz * Math.cos(rotX);
+
+        // Perspective
+        const dist = 4.5; // Camera distance
+        const scale = Math.min(w, h) * 0.9 * zoom;
+        const f = scale / (pz2 + dist);
+
+        return {
+            x: w/2 + px * f,
+            y: h/2 - py2 * f,
+            z: pz2,
+            f: f
+        };
+    }
+
+    function renderScene(context, canvasWidth, canvasHeight, isRaw) {
+        context.clearRect(0, 0, canvasWidth, canvasHeight);
+
+        // Adjust zoom for Raw view because coordinates are in range [-5, 5] instead of [-1, 1]
+        const currentZoom = isRaw ? canvasState.zoom * 0.45 : canvasState.zoom;
+
+        // 1. Project Points
+        const projPoints = gridPoints.map(p => {
+            // Choose source coords
+            const X = isRaw ? p.rx : p.wx;
+            const Y = isRaw ? p.ry : p.wy;
+            const Z = isRaw ? p.rz : p.wz;
+
+            const proj = project(X, Y, Z, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
+            return { ...p, px: proj.x, py: proj.y, pz: proj.z };
+        });
+
+        // 2. Sort Triangles
+        const renderList = triangles.map(tri => {
+            const p0 = projPoints[tri[0]];
+            const p1 = projPoints[tri[1]];
+            const p2 = projPoints[tri[2]];
+            const z = (p0.pz + p1.pz + p2.pz) / 3;
+            const t = (p0.colorT + p1.colorT + p2.colorT) / 3;
+            return { p0, p1, p2, z, t };
+        }).sort((a, b) => b.z - a.z);
+
+        // 3. Draw Surface
+        renderList.forEach(tri => {
+            context.beginPath();
+            context.moveTo(tri.p0.px, tri.p0.py);
+            context.lineTo(tri.p1.px, tri.p1.py);
+            context.lineTo(tri.p2.px, tri.p2.py);
+            context.closePath();
+            context.fillStyle = getViridisColor(tri.t);
+            context.fill();
+            context.strokeStyle = "rgba(255,255,255,0.1)";
+            context.lineWidth = 1;
+            context.stroke();
+        });
+
+        // 4. Draw Markers (User & Optimal)
+        // ... (Update marker projection logic below)
+
+        const sMin = 0, sMax = 15;
+        const iMin = -5, iMax = 20;
+
+        // Current Marker
+        let curX, curY, curZ;
+
+        let gridMax = -Infinity, gridMin = Infinity;
+        gridPoints.forEach(p => { if(p.val>gridMax) gridMax=p.val; if(p.val<gridMin) gridMin=p.val; });
+        const curNorm = (state.mse - gridMin) / (gridMax - gridMin);
+
+        if (isRaw) {
+            // Raw Logic - must use same scale as surface (0.35)
+            const scale = 0.35;
+            curX = ((state.slope / 15) * 10 - 5) * scale;
+            curZ = (((state.intercept + 5) / 25) * 10 - 5) * scale;
+            curY = (Math.min(state.mse * 0.02, 7) - 2) * scale;
+        } else {
+            // Normalized Logic (Unchanged)
+            curX = (state.slope - sMin) / (sMax - sMin) * 2 - 1;
+            curZ = (state.intercept - iMin) / (iMax - iMin) * 2 - 1;
+            curY = curNorm * 1.5 - 0.75;
+        }
+
+        const curProj = project(curX, curY, curZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
+
+        context.beginPath();
+        context.arc(curProj.x, curProj.y, 6, 0, Math.PI * 2);
+        context.fillStyle = "#e74c3c";
+        context.fill();
+        context.strokeStyle = "white";
+        context.lineWidth = 2; context.stroke();
+
+        // Optimal Marker
+        let optX, optY, optZ;
+        const optNorm = (state.minMSE - gridMin) / (gridMax - gridMin);
+
+        if (isRaw) {
+            // Raw Logic - must use same scale as surface (0.35)
+            const scaleOpt = 0.35;
+            optX = ((state.bestSlope / 15) * 10 - 5) * scaleOpt;
+            optZ = (((state.bestIntercept + 5) / 25) * 10 - 5) * scaleOpt;
+            optY = (Math.min(state.minMSE * 0.02, 7) - 2) * scaleOpt;
+        } else {
+            // Normalized Logic
+            optX = (state.bestSlope - sMin) / (sMax - sMin) * 2 - 1;
+            optZ = (state.bestIntercept - iMin) / (iMax - iMin) * 2 - 1;
+            optY = optNorm * 1.5 - 0.75;
+        }
+
+        const optProj = project(optX, optY, optZ, canvasWidth, canvasHeight, canvasState.rotation.x, canvasState.rotation.y, currentZoom);
+
+        context.beginPath();
+        context.moveTo(optProj.x, optProj.y - 6);
+        context.lineTo(optProj.x + 6, optProj.y);
+        context.lineTo(optProj.x, optProj.y + 6);
+        context.lineTo(optProj.x - 6, optProj.y);
+        context.closePath();
+        context.fillStyle = "#3498db";
+        context.fill();
+        context.strokeStyle = "white";
+        context.lineWidth = 2; context.stroke();
+    }
+
+    function drawLoop() {
+        if (canvasState.autoRotate) {
+            canvasState.rotation.y += 0.0005;
+        }
+
+        // Render Normalized
+        renderScene(ctx, canvas.width, canvas.height, false);
+
+        // Render Raw
+        renderScene(ctxRaw, canvasRaw.width, canvasRaw.height, true);
+
+        requestAnimationFrame(drawLoop);
+    }
+
+    function resizeCanvas() {
+        const c1 = document.getElementById('container3d');
+        canvas.width = c1.clientWidth;
+        canvas.height = c1.clientHeight;
+
+        const c2 = document.getElementById('container3dRaw');
+        canvasRaw.width = c2.clientWidth;
+        canvasRaw.height = c2.clientHeight;
+
+        generateGrid();
+    }
+
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
+    window.onload = function() {
+        findOptimum();
+
+        document.getElementById('slopeSlider').value = state.slope;
+        document.getElementById('interceptSlider').value = state.intercept;
+
+        init2D();
+        updateState();
+
+        resizeCanvas();
+        requestAnimationFrame(drawLoop);
+
+        window.addEventListener('resize', () => {
+            Plotly.Plots.resize('plot2d');
+            resizeCanvas();
+        });
+
+        // Sliders
+        document.getElementById('slopeSlider').addEventListener('input', e => {
+            state.slope = parseFloat(e.target.value);
+            updateState();
+        });
+        document.getElementById('interceptSlider').addEventListener('input', e => {
+            state.intercept = parseFloat(e.target.value);
+            updateState();
+        });
+
+        // Buttons
+        document.getElementById('optimizeBtn').addEventListener('click', () => {
+            state.slope = state.bestSlope;
+            state.intercept = state.bestIntercept;
+            updateState(true);
+        });
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            state.slope = 6.5; state.intercept = 3.5;
+            data.x = [...originalData.x]; data.y = [...originalData.y];
+            findOptimum(); generateGrid(); updateState(true);
+        });
+
+        // Universal Controls (Apply to both canvases via Shared State)
+        function setupControls(container) {
+            container.addEventListener('mousedown', e => {
+                canvasState.dragging = true;
+                canvasState.lastMouse = { x: e.clientX, y: e.clientY };
+                canvasState.autoRotate = false;
+                document.getElementById('rotateBtn').classList.remove('active');
+            });
+
+            container.addEventListener('wheel', e => {
+                e.preventDefault();
+                const zoomSpeed = 0.02;
+                canvasState.zoom += -e.deltaY * zoomSpeed;
+                canvasState.zoom = Math.max(0.5, Math.min(8.0, canvasState.zoom));
+            }, { passive: false });
+        }
+
+        setupControls(document.getElementById('container3d'));
+        setupControls(document.getElementById('container3dRaw'));
+
+        // Проброс скролла с sidebar на content (правую часть) для вертикального скролла
+        const contentArea = document.querySelector('.content');
+        document.querySelector('.sidebar').addEventListener('wheel', e => {
+            contentArea.scrollTop += e.deltaY;
+        }, { passive: true });
+
+        window.addEventListener('mouseup', () => {
+            canvasState.dragging = false;
+            canvasState.autoRotate = true;
+            document.getElementById('rotateBtn').classList.add('active');
+            document.getElementById('rotateBtnRaw').classList.add('active');
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (!canvasState.dragging) return;
+            const dx = e.clientX - canvasState.lastMouse.x;
+            const dy = e.clientY - canvasState.lastMouse.y;
+            canvasState.rotation.y += dx * 0.01;
+            canvasState.rotation.x += dy * 0.01;
+            canvasState.rotation.x = Math.max(-1.5, Math.min(1.5, canvasState.rotation.x));
+            canvasState.lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        document.getElementById('rotateBtn').addEventListener('click', function() {
+            canvasState.autoRotate = !canvasState.autoRotate;
+            this.classList.toggle('active', canvasState.autoRotate);
+            document.getElementById('rotateBtnRaw').classList.toggle('active', canvasState.autoRotate);
+        });
+        document.getElementById('rotateBtnRaw').addEventListener('click', function() {
+            canvasState.autoRotate = !canvasState.autoRotate;
+            this.classList.toggle('active', canvasState.autoRotate);
+            document.getElementById('rotateBtn').classList.toggle('active', canvasState.autoRotate);
+        });
+        document.getElementById('rotateBtn').classList.add('active');
+        document.getElementById('rotateBtnRaw').classList.add('active');
+
+        document.getElementById('resetViewBtn').addEventListener('click', () => {
+            canvasState.rotation = { x: -0.540, y: -0.644 };
+            canvasState.zoom = 2.196;
+        });
+        document.getElementById('resetViewBtnRaw').addEventListener('click', () => {
+            canvasState.rotation = { x: -0.540, y: -0.644 };
+            canvasState.zoom = 2.196;
+        });
+    };
+</script>
+</body>
+</html>
