@@ -370,8 +370,8 @@
 
     // 3D Visualization State (Shared between both plots)
     let canvasState = {
-        rotation: { x: 0.6, y: 0.4 }, 
-        zoom: 1.0, 
+        rotation: { x: -0.540, y: -0.644 }, 
+        zoom: 2.196, 
         autoRotate: true,
         dragging: false,
         lastMouse: { x: 0, y: 0 }
@@ -783,7 +783,7 @@
 
     function drawLoop() {
         if (canvasState.autoRotate) {
-            canvasState.rotation.y += 0.005;
+            canvasState.rotation.y += 0.0005;
         }
 
         // Render Normalized
@@ -869,7 +869,12 @@
         setupControls(document.getElementById('container3d'));
         setupControls(document.getElementById('container3dRaw'));
         
-        window.addEventListener('mouseup', () => { canvasState.dragging = false; });
+        window.addEventListener('mouseup', () => { 
+            canvasState.dragging = false; 
+            canvasState.autoRotate = true;
+            document.getElementById('rotateBtn').classList.add('active');
+            document.getElementById('rotateBtnRaw').classList.add('active');
+        });
         
         window.addEventListener('mousemove', e => {
             if (!canvasState.dragging) return;
@@ -895,12 +900,12 @@
         document.getElementById('rotateBtnRaw').classList.add('active');
 
         document.getElementById('resetViewBtn').addEventListener('click', () => {
-            canvasState.rotation = { x: 0.6, y: 0.4 };
-            canvasState.zoom = 1.0;
+            canvasState.rotation = { x: -0.540, y: -0.644 };
+            canvasState.zoom = 2.196;
         });
         document.getElementById('resetViewBtnRaw').addEventListener('click', () => {
-            canvasState.rotation = { x: 0.6, y: 0.4 };
-            canvasState.zoom = 1.0;
+            canvasState.rotation = { x: -0.540, y: -0.644 };
+            canvasState.zoom = 2.196;
         });
     };
 </script>
