@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE vs MSE vs RMSE</title>
+    <!-- MathJax for rendering formulas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --math-color: #2c3e50;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lang-switch-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .lang-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--secondary-color);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: #f0f0f0;
+        }
+
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px; /* Added top padding for switcher */
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            color: var(--text-color);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 0 20px 60px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .formula-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 120px;
+        }
+
+        .text-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .explanation {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .explanation p {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .card {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 25px;
+            }
+            .formula-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lang-switch-container">
+        <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('ru')">RU</button>
+    </div>
+
+    <div class="header">
+        <h1 data-key="mainTitle">Linear Regression Formulas</h1>
+        <div class="subtitle" data-key="mainSubtitle">The Model Equation & Error Metrics (SSE, MSE, RMSE)</div>
+    </div>
+
+    <div class="container">
+        
+        <!-- LINEAR EQUATION CARD -->
+        <div class="card">
+            <div class="formula-section" data-key="lineEqFormula">
+                $$ y = mx + b $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="lineEqTitle">Linear Regression Equation</div>
+                <div class="explanation">
+                    <div data-key="lineEqWhat"><strong>What it is:</strong> The basic formula for a straight line used to make predictions.<ul><li>\(x\): Input</li><li>\(y\): Output (Prediction)</li><li>\(m\): Slope (often called \(w\) or "weight" in ML)</li><li>\(b\): Bias / Intercept</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSE CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ SSE = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2 $$
+            </div>
+            <div class="text-section">
+                <div class="card-title">SSE (Sum of Squared Errors)</div>
+                <div class="explanation">
+                    <p data-key="sseWhat"><strong>What it is:</strong> The sum of the squares of all errors. The fundamental metric.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="sseReason1">Mathematically ideal for optimization (graph is a smooth convex bowl).</li>
+                        <li data-key="sseReason2">Heavily "punishes" large errors (error squared grows very fast).</li>
+                    </ul>
+                    <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 10px;" data-key="sseMinus">
+                        <em>Downside:</em> Value grows with the size of the dataset.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MSE CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ MSE = \frac{SSE}{n} = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2 $$
+            </div>
+            <div class="text-section">
+                <div class="card-title">MSE (Mean Squared Error)</div>
+                <div class="explanation">
+                    <p data-key="mseWhat"><strong>What it is:</strong> The average value of the squared error.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="mseReason1">Independent of the number of data points (\(n\)).</li>
+                        <li data-key="mseReason2">Allows comparison of model quality across datasets of different sizes.</li>
+                    </ul>
+                    <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 10px;" data-key="mseMinus">
+                        <em>Downside:</em> Units are "squared dollars" or "squared meters", which are hard to interpret.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RMSE CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ RMSE = \sqrt{MSE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2} $$
+            </div>
+            <div class="text-section">
+                <div class="card-title">RMSE (Root Mean Squared Error)</div>
+                <div class="explanation">
+                    <p data-key="rmseWhat"><strong>What it is:</strong> The square root of the mean squared error.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="rmseReason1">Returns dimensionality to original units (e.g., dollars).</li>
+                        <li data-key="rmseReason2">Easy to explain to business: "On average, our model is off by X dollars".</li>
+                        <li data-key="rmseReason3">The de facto standard for evaluating accuracy in real tasks.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                mainTitle: "Linear Regression Formulas",
+                mainSubtitle: "The Model Equation & Error Metrics (SSE, MSE, RMSE)",
+                whyUseful: "Why it's useful:",
+                
+                lineEqTitle: "Linear Regression Equation",
+                lineEqFormula: "$$ y = mx + b $$",
+                lineEqWhat: "<strong>What it is:</strong> The basic formula for a straight line used to make predictions.<ul><li>\\(x\\): Input</li><li>\\(y\\): Output (Prediction)</li><li>\\(m\\): Slope (often called \\(w\\) or \"weight\" in ML)</li><li>\\(b\\): Bias / Intercept</li></ul>",
+
+                sseWhat: "<strong>What it is:</strong> The sum of the squares of all errors. The fundamental metric.",
+                sseReason1: "Mathematically ideal for optimization (graph is a smooth convex bowl).",
+                sseReason2: "Heavily \"punishes\" large errors (error squared grows very fast).",
+                sseMinus: "<em>Downside:</em> Value grows with the size of the dataset.",
+
+                mseWhat: "<strong>What it is:</strong> The average value of the squared error.",
+                mseReason1: "Independent of the number of data points (\\(n\\)).",
+                mseReason2: "Allows comparison of model quality across datasets of different sizes.",
+                mseMinus: "<em>Downside:</em> Units are \"squared dollars\" or \"squared meters\", which are hard to interpret.",
+
+                rmseWhat: "<strong>What it is:</strong> The square root of the mean squared error.",
+                rmseReason1: "Returns dimensionality to original units (e.g., dollars).",
+                rmseReason2: "Easy to explain to business: \"On average, our model is off by X dollars\".",
+                rmseReason3: "The de facto standard for evaluating accuracy in real tasks."
+            },
+            ru: {
+                mainTitle: "Формулы линейной регрессии",
+                mainSubtitle: "Уравнение модели и метрики ошибки (SSE, MSE, RMSE)",
+                whyUseful: "Почему удобно:",
+
+                lineEqTitle: "Уравнение прямой",
+                lineEqFormula: "$$ y = ax + b $$",
+                lineEqWhat: "<strong>Что это:</strong> Базовая формула прямой линии, по которой строятся предсказания.<ul><li>\\(x\\): Вход</li><li>\\(y\\): Выход</li><li>\\(a\\): Наклон (slope). В ML часто обозначается как \\(w\\) (weight — вес)</li><li>\\(b\\): Смещение (bias / intercept)</li></ul>",
+
+                sseWhat: "<strong>Что это:</strong> Сумма квадратов всех ошибок. Фундаментальная метрика.",
+                sseReason1: "Математически идеальна для оптимизации (график — гладкая выпуклая чаша).",
+                sseReason2: "Сильно \"наказывает\" за большие ошибки (квадрат ошибки растет очень быстро).",
+                sseMinus: "<em>Минус:</em> Значение растет вместе с размером данных.",
+
+                mseWhat: "<strong>Что это:</strong> Среднее значение квадрата ошибки.",
+                mseReason1: "Не зависит от количества данных (\\(n\\)).",
+                mseReason2: "Позволяет сравнивать качество моделей на выборках разного размера.",
+                mseMinus: "<em>Минус:</em> Единицы измерения — \"квадратные доллары\" или \"квадратные метры\", что сложно интерпретировать.",
+
+                rmseWhat: "<strong>Что это:</strong> Корень из среднеквадратичной ошибки.",
+                rmseReason1: "Возвращает размерность к исходным единицам (например, долларам).",
+                rmseReason2: "Легко объяснить бизнесу: \"В среднем наша модель ошибается на X долларов\".",
+                rmseReason3: "Стандарт де-факто для оценки точности в реальных задачах."
+            }
+        };
+
+        function setLanguage(lang) {
+            // Update active button state
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase() === lang) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update text content
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+
+            // Re-render MathJax if necessary
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+    </script>
+
+</body>
+</html>
