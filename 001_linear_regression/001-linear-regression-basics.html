@@ -631,17 +631,11 @@
             p.wy = norm * 1.5 - 0.75; 
             p.colorT = norm;
 
-            // RAW COORDS (Preserve Aspect Ratio)
-            // Center around midpoints
-            const midS = (sMax + sMin) / 2;
-            const midI = (iMax + iMin) / 2;
-            
-            p.rx = (p.slope - midS) * scaleWorld;      // Slope axis
-            p.rz = (p.intercept - midI) * scaleWorld;  // Intercept axis (will be wider)
-            
-            // Raw height: scale linearly but don't force to fill box
-            // SSE can be 1000+, scale to be viewable
-            p.ry = (p.val - minVal) * 0.003 - 0.5; // Arbitrary scale to look good
+            // RAW COORDS (Scaled by 0.2 to fit engine)
+            const scale = 0.2;
+            p.rx = ((p.slope / 15) * 10 - 5) * scale;
+            p.rz = (((p.intercept + 5) / 25) * 10 - 5) * scale;
+            p.ry = (Math.min(p.val * 0.02, 7) - 2) * scale; 
         });
 
         triangles = [];
@@ -683,7 +677,8 @@
     function renderScene(context, canvasWidth, canvasHeight, isRaw) {
         context.clearRect(0, 0, canvasWidth, canvasHeight);
 
-        const currentZoom = isRaw ? canvasState.zoom * 0.45 : canvasState.zoom;
+        // Adjust zoom for Raw view because coordinates are in range [-5, 5] instead of [-1, 1]
+        const currentZoom = isRaw ? canvasState.zoom * 0.2 : canvasState.zoom;
 
         // 1. Project Points
         const projPoints = gridPoints.map(p => {
@@ -721,11 +716,10 @@
         });
 
         // 4. Draw Markers (User & Optimal)
+        // ... (Update marker projection logic below)
+
         const sMin = 0, sMax = 15;
         const iMin = -5, iMax = 20;
-        const midS = (sMax + sMin) / 2;
-        const midI = (iMax + iMin) / 2;
-        const scaleWorld = 0.15;
 
         // Current Marker
         let curX, curY, curZ;
@@ -735,10 +729,12 @@
         const curNorm = (state.sse - gridMin) / (gridMax - gridMin);
 
         if (isRaw) {
-            curX = (state.slope - midS) * scaleWorld;
-            curZ = (state.intercept - midI) * scaleWorld;
-            curY = (state.sse - gridMin) * 0.003 - 0.5;
+            // New Raw Logic matching index_hm.html
+            curX = (state.slope / 15) * 10 - 5;
+            curZ = ((state.intercept + 5) / 25) * 10 - 5;
+            curY = Math.min(state.sse * 0.02, 7) - 2;
         } else {
+            // Normalized Logic (Unchanged)
             curX = (state.slope - sMin) / (sMax - sMin) * 2 - 1;
             curZ = (state.intercept - iMin) / (iMax - iMin) * 2 - 1;
             curY = curNorm * 1.5 - 0.75;
@@ -758,10 +754,12 @@
         const optNorm = (state.minSSE - gridMin) / (gridMax - gridMin);
 
         if (isRaw) {
-            optX = (state.bestSlope - midS) * scaleWorld;
-            optZ = (state.bestIntercept - midI) * scaleWorld;
-            optY = (state.minSSE - gridMin) * 0.003 - 0.5;
+            // New Raw Logic
+            optX = (state.bestSlope / 15) * 10 - 5;
+            optZ = ((state.bestIntercept + 5) / 25) * 10 - 5;
+            optY = Math.min(state.minSSE * 0.02, 7) - 2;
         } else {
+            // Normalized Logic
             optX = (state.bestSlope - sMin) / (sMax - sMin) * 2 - 1;
             optZ = (state.bestIntercept - iMin) / (iMax - iMin) * 2 - 1;
             optY = optNorm * 1.5 - 0.75;
