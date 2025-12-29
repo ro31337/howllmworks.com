@@ -631,8 +631,8 @@
             p.wy = norm * 1.5 - 0.75; 
             p.colorT = norm;
 
-            // RAW COORDS (Scaled by 0.2 to fit engine)
-            const scale = 0.2;
+            // RAW COORDS (Scaled by 0.35 to fit engine)
+            const scale = 0.35;
             p.rx = ((p.slope / 15) * 10 - 5) * scale;
             p.rz = (((p.intercept + 5) / 25) * 10 - 5) * scale;
             p.ry = (Math.min(p.val * 0.02, 7) - 2) * scale; 
@@ -729,10 +729,11 @@
         const curNorm = (state.sse - gridMin) / (gridMax - gridMin);
 
         if (isRaw) {
-            // New Raw Logic matching index_hm.html
-            curX = (state.slope / 15) * 10 - 5;
-            curZ = ((state.intercept + 5) / 25) * 10 - 5;
-            curY = Math.min(state.sse * 0.02, 7) - 2;
+            // Raw Logic - must use same scale as surface (0.35)
+            const scale = 0.35;
+            curX = ((state.slope / 15) * 10 - 5) * scale;
+            curZ = (((state.intercept + 5) / 25) * 10 - 5) * scale;
+            curY = (Math.min(state.sse * 0.02, 7) - 2) * scale;
         } else {
             // Normalized Logic (Unchanged)
             curX = (state.slope - sMin) / (sMax - sMin) * 2 - 1;
@@ -754,10 +755,11 @@
         const optNorm = (state.minSSE - gridMin) / (gridMax - gridMin);
 
         if (isRaw) {
-            // New Raw Logic
-            optX = (state.bestSlope / 15) * 10 - 5;
-            optZ = ((state.bestIntercept + 5) / 25) * 10 - 5;
-            optY = Math.min(state.minSSE * 0.02, 7) - 2;
+            // Raw Logic - must use same scale as surface (0.35)
+            const scaleOpt = 0.35;
+            optX = ((state.bestSlope / 15) * 10 - 5) * scaleOpt;
+            optZ = (((state.bestIntercept + 5) / 25) * 10 - 5) * scaleOpt;
+            optY = (Math.min(state.minSSE * 0.02, 7) - 2) * scaleOpt;
         } else {
             // Normalized Logic
             optX = (state.bestSlope - sMin) / (sMax - sMin) * 2 - 1;
