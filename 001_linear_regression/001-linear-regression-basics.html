@@ -678,7 +678,7 @@
         context.clearRect(0, 0, canvasWidth, canvasHeight);
 
         // Adjust zoom for Raw view because coordinates are in range [-5, 5] instead of [-1, 1]
-        const currentZoom = isRaw ? canvasState.zoom * 0.2 : canvasState.zoom;
+        const currentZoom = isRaw ? canvasState.zoom * 0.45 : canvasState.zoom;
 
         // 1. Project Points
         const projPoints = gridPoints.map(p => {
