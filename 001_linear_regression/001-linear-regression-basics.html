@@ -868,7 +868,13 @@
 
         setupControls(document.getElementById('container3d'));
         setupControls(document.getElementById('container3dRaw'));
-        
+
+        // Проброс скролла с sidebar на content (правую часть) для вертикального скролла
+        const contentArea = document.querySelector('.content');
+        document.querySelector('.sidebar').addEventListener('wheel', e => {
+            contentArea.scrollTop += e.deltaY;
+        }, { passive: true });
+
         window.addEventListener('mouseup', () => { 
             canvasState.dragging = false; 
             canvasState.autoRotate = true;
