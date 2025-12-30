@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Education: Linear Regression</title>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lang-switch-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .lang-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--secondary-color);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: #f0f0f0;
+        }
+
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            color: var(--text-color);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 0 20px 60px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 20px 0 10px 0;
+            padding-left: 5px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 25px 30px;
+            transition: transform 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 8px;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+
+        .badge-basics { background: #e0f2fe; color: #0369a1; }
+        .badge-polynomial { background: #fef3c7; color: #92400e; }
+        .badge-optimization { background: #dcfce7; color: #166534; }
+        .badge-metrics { background: #f3e8ff; color: #7c3aed; }
+        .badge-reference { background: #fce7f3; color: #be185d; }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lang-switch-container">
+        <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('ru')">RU</button>
+    </div>
+
+    <div class="header">
+        <h1 data-key="mainTitle">Linear Regression Module</h1>
+        <div class="subtitle" data-key="mainSubtitle">Interactive visualizations for understanding regression mechanics</div>
+    </div>
+
+    <div class="container">
+
+        <!-- BASICS SECTION -->
+        <div class="section-title" data-key="sectionBasics">Basics</div>
+
+        <a href="001-linear-regression/010-linear-regression-sse-basics.html" class="card">
+            <span class="badge badge-basics">SSE</span>
+            <div class="card-title" data-key="title010">SSE Landscape Explorer</div>
+            <div class="card-desc" data-key="desc010">
+                Explore the Sum of Squared Errors (SSE) loss landscape. Manipulate slope and intercept manually to see how the loss function changes. Visualize in 2D scatter plot and interactive 3D surfaces (normalized and raw geometry).
+            </div>
+        </a>
+
+        <a href="001-linear-regression/050-linear-regression-mse-basics.html" class="card">
+            <span class="badge badge-basics">MSE</span>
+            <div class="card-title" data-key="title050">MSE Landscape Explorer</div>
+            <div class="card-desc" data-key="desc050">
+                Same interactive tool using Mean Squared Error (MSE = SSE / n). The loss value is independent of dataset size, making it easier to compare models across different datasets.
+            </div>
+        </a>
+
+        <a href="001-linear-regression/060-linear-regression-rmse-basics.html" class="card">
+            <span class="badge badge-basics">RMSE</span>
+            <div class="card-title" data-key="title060">RMSE Landscape Explorer</div>
+            <div class="card-desc" data-key="desc060">
+                Root Mean Squared Error visualization. RMSE returns units to original scale (dollars, meters, etc.), making it the de facto standard for reporting model accuracy in real-world applications.
+            </div>
+        </a>
+
+        <!-- POLYNOMIAL SECTION -->
+        <div class="section-title" data-key="sectionPolynomial">Polynomial Regression</div>
+
+        <a href="001-linear-regression/020-polynomial-regression-sse.html" class="card">
+            <span class="badge badge-polynomial">Polynomial</span>
+            <div class="card-title" data-key="title020">Polynomial Regression (y = ax² + bx + c)</div>
+            <div class="card-desc" data-key="desc020">
+                Move beyond straight lines. Fit quadratic curves to data by adjusting three parameters (a, b, c). The 3D loss surface shows how error changes for different values of quadratic and linear coefficients.
+            </div>
+        </a>
+
+        <!-- OPTIMIZATION SECTION -->
+        <div class="section-title" data-key="sectionOptimization">Optimization</div>
+
+        <a href="001-linear-regression/030-gradient-descent-sse.html" class="card">
+            <span class="badge badge-optimization">Gradient Descent</span>
+            <div class="card-title" data-key="title030">Gradient Descent (Normalized Surface)</div>
+            <div class="card-desc" data-key="desc030">
+                Watch the optimization algorithm in action. See the "ball" roll down the normalized convex loss surface to find the optimal regression line. Adjust learning rate and observe convergence behavior.
+            </div>
+        </a>
+
+        <a href="001-linear-regression/040-gradient-descent-sse-raw.html" class="card">
+            <span class="badge badge-optimization">Raw Geometry</span>
+            <div class="card-title" data-key="title040">Gradient Descent (Raw Surface)</div>
+            <div class="card-desc" data-key="desc040">
+                Same gradient descent visualization but on the true (asymmetric) SSE surface. Observe how the real geometry differs from the idealized "bowl" often shown in textbooks.
+            </div>
+        </a>
+
+        <!-- REFERENCE SECTION -->
+        <div class="section-title" data-key="sectionReference">Reference</div>
+
+        <a href="001-linear-regression/070-sse-mse-rmse.html" class="card">
+            <span class="badge badge-metrics">Formulas</span>
+            <div class="card-title" data-key="title070">SSE vs MSE vs RMSE Formulas</div>
+            <div class="card-desc" data-key="desc070">
+                A quick reference card with mathematical formulas for all three error metrics. Includes explanations of when and why to use each metric, with pros and cons clearly explained.
+            </div>
+        </a>
+
+        <a href="001-linear-regression/500-links.html" class="card">
+            <span class="badge badge-reference">Links</span>
+            <div class="card-title" data-key="title500">Useful Resources</div>
+            <div class="card-desc" data-key="desc500">
+                Curated external links to deepen your understanding: intuitive explanations, Python implementations from scratch, and in-depth articles on linear regression fundamentals.
+            </div>
+        </a>
+
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                mainTitle: "Linear Regression Module",
+                mainSubtitle: "Interactive visualizations for understanding regression mechanics",
+
+                sectionBasics: "Basics",
+                sectionPolynomial: "Polynomial Regression",
+                sectionOptimization: "Optimization",
+                sectionReference: "Reference",
+
+                title010: "SSE Landscape Explorer",
+                desc010: "Explore the Sum of Squared Errors (SSE) loss landscape. Manipulate slope and intercept manually to see how the loss function changes. Visualize in 2D scatter plot and interactive 3D surfaces (normalized and raw geometry).",
+
+                title050: "MSE Landscape Explorer",
+                desc050: "Same interactive tool using Mean Squared Error (MSE = SSE / n). The loss value is independent of dataset size, making it easier to compare models across different datasets.",
+
+                title060: "RMSE Landscape Explorer",
+                desc060: "Root Mean Squared Error visualization. RMSE returns units to original scale (dollars, meters, etc.), making it the de facto standard for reporting model accuracy in real-world applications.",
+
+                title020: "Polynomial Regression (y = ax² + bx + c)",
+                desc020: "Move beyond straight lines. Fit quadratic curves to data by adjusting three parameters (a, b, c). The 3D loss surface shows how error changes for different values of quadratic and linear coefficients.",
+
+                title030: "Gradient Descent (Normalized Surface)",
+                desc030: "Watch the optimization algorithm in action. See the \"ball\" roll down the normalized convex loss surface to find the optimal regression line. Adjust learning rate and observe convergence behavior.",
+
+                title040: "Gradient Descent (Raw Surface)",
+                desc040: "Same gradient descent visualization but on the true (asymmetric) SSE surface. Observe how the real geometry differs from the idealized \"bowl\" often shown in textbooks.",
+
+                title070: "SSE vs MSE vs RMSE Formulas",
+                desc070: "A quick reference card with mathematical formulas for all three error metrics. Includes explanations of when and why to use each metric, with pros and cons clearly explained.",
+
+                title500: "Useful Resources",
+                desc500: "Curated external links to deepen your understanding: intuitive explanations, Python implementations from scratch, and in-depth articles on linear regression fundamentals."
+            },
+            ru: {
+                mainTitle: "Модуль линейной регрессии",
+                mainSubtitle: "Интерактивные визуализации для понимания механики регрессии",
+
+                sectionBasics: "Основы",
+                sectionPolynomial: "Полиномиальная регрессия",
+                sectionOptimization: "Оптимизация",
+                sectionReference: "Справочник",
+
+                title010: "Исследователь ландшафта SSE",
+                desc010: "Изучите ландшафт функции потерь SSE (сумма квадратов ошибок). Управляйте наклоном и смещением вручную, наблюдая как меняется ошибка. Визуализация в 2D и интерактивных 3D поверхностях.",
+
+                title050: "Исследователь ландшафта MSE",
+                desc050: "Тот же инструмент, но с MSE (среднеквадратичная ошибка = SSE / n). Значение не зависит от размера выборки, что позволяет сравнивать модели на разных наборах данных.",
+
+                title060: "Исследователь ландшафта RMSE",
+                desc060: "Визуализация RMSE (корень из MSE). RMSE возвращает единицы измерения к исходной шкале (доллары, метры и т.д.), что делает её стандартом для оценки точности в реальных задачах.",
+
+                title020: "Полиномиальная регрессия (y = ax² + bx + c)",
+                desc020: "Выходим за пределы прямых линий. Подгонка квадратичных кривых к данным через три параметра (a, b, c). 3D-поверхность показывает зависимость ошибки от коэффициентов.",
+
+                title030: "Градиентный спуск (нормализованная поверхность)",
+                desc030: "Наблюдайте за работой алгоритма оптимизации. «Шарик» скатывается по выпуклой поверхности потерь к оптимальной линии регрессии. Регулируйте learning rate и наблюдайте за сходимостью.",
+
+                title040: "Градиентный спуск (реальная поверхность)",
+                desc040: "Та же визуализация градиентного спуска, но на истинной (асимметричной) поверхности SSE. Посмотрите, как реальная геометрия отличается от идеализированной «чаши» из учебников.",
+
+                title070: "Формулы SSE vs MSE vs RMSE",
+                desc070: "Справочная карточка с математическими формулами всех трёх метрик ошибки. Объяснения когда и почему использовать каждую метрику, с плюсами и минусами.",
+
+                title500: "Полезные ресурсы",
+                desc500: "Подборка внешних ссылок для углубления понимания: интуитивные объяснения, реализации на Python с нуля, статьи об основах линейной регрессии."
+            }
+        };
+
+        function setLanguage(lang) {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase() === lang) {
+                    btn.classList.add('active');
+                }
+            });
+
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

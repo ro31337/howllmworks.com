@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Useful Links</title>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lang-switch-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .lang-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--secondary-color);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: #f0f0f0;
+        }
+
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            color: var(--text-color);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 0 20px 60px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+            transition: transform 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .card-meta {
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+
+        .explanation {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lang-switch-container">
+        <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('ru')">RU</button>
+    </div>
+
+    <div class="header">
+        <h1 data-key="mainTitle">Useful Links</h1>
+        <div class="subtitle" data-key="mainSubtitle">Curated resources to deepen your understanding of Linear Regression</div>
+    </div>
+
+    <div class="container">
+        
+        <!-- Link 1 -->
+        <a href="https://onlinekyne.substack.com/p/what-is-linear-regression" target="_blank" class="card">
+            <div class="card-title">What is Linear Regression? (Online Kyne)</div>
+            <div class="card-meta">onlinekyne.substack.com</div>
+            <div class="explanation" data-key="descKyne">
+                Explains linear regression using an engaging analogy of predicting drag show tips. It introduces the "line of best fit" and how to use SSE (Sum of Squared Errors) to measure accuracy.
+            </div>
+        </a>
+
+        <!-- Link 2 -->
+        <a href="https://app.coursekata.org/preview/book/8b73fd31-3c28-4dcf-906c-5af5f3f179bf/lesson/4/8" target="_blank" class="card">
+            <div class="card-title">SSE, MSE, and RMSE (CourseKata)</div>
+            <div class="card-meta">app.coursekata.org</div>
+            <div class="explanation" data-key="descCourseKata">
+                A deep dive into error metrics: SSE, MSE, and RMSE. It explains how minimizing these errors leads to the best fit and why RMSE is often the most interpretable metric.
+            </div>
+        </a>
+
+        <!-- Link 3 -->
+        <a href="https://github.com/rodmarkun/SmolML/tree/main/smolml/models/regression" target="_blank" class="card">
+            <div class="card-title">SmolML: Regression Models</div>
+            <div class="card-meta">github.com/rodmarkun</div>
+            <div class="explanation" data-key="descSmolML">
+                A minimal, from-scratch implementation of Linear and Polynomial regression in Python. Great for understanding the code and math behind the models without heavy frameworks.
+            </div>
+        </a>
+
+        <!-- Link 4 -->
+        <a href="https://exploringartificialintelligence.substack.com/p/linear-regression-predicting-trends" target="_blank" class="card">
+            <div class="card-title">Linear Regression: Predicting Trends</div>
+            <div class="card-meta">exploringartificialintelligence.substack.com</div>
+            <div class="explanation" data-key="descExploringAI">
+                Covers the fundamentals of the linear equation (y = a + bx) and how to interpret slope and intercept. Includes practical examples and Python code for implementation.
+            </div>
+        </a>
+
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                mainTitle: "Useful Links",
+                mainSubtitle: "Curated resources to deepen your understanding of Linear Regression",
+                descKyne: "Explains linear regression using an engaging analogy of predicting drag show tips. It introduces the \"line of best fit\" and how to use SSE (Sum of Squared Errors) to measure accuracy.",
+                descCourseKata: "A deep dive into error metrics: SSE, MSE, and RMSE. It explains how minimizing these errors leads to the best fit and why RMSE is often the most interpretable metric.",
+                descSmolML: "A minimal, from-scratch implementation of Linear and Polynomial regression in Python. Great for understanding the code and math behind the models without heavy frameworks.",
+                descExploringAI: "Covers the fundamentals of the linear equation (y = a + bx) and how to interpret slope and intercept. Includes practical examples and Python code for implementation."
+            },
+            ru: {
+                mainTitle: "Полезные ссылки",
+                mainSubtitle: "Ресурсы для углубления понимания Линейной Регрессии",
+                descKyne: "Объясняет линейную регрессию на увлекательном примере предсказания чаевых. Вводит понятие \"линии наилучшего соответствия\" и использование SSE (суммы квадратов ошибок) для оценки точности.",
+                descCourseKata: "Подробный разбор метрик ошибки: SSE, MSE и RMSE. Объясняет, как минимизация этих ошибок приводит к лучшей модели и почему RMSE часто является наиболее понятной метрикой.",
+                descSmolML: "Минималистичная реализация линейной и полиномиальной регрессии на Python \"с нуля\". Отлично подходит для понимания кода и математики моделей без использования тяжелых библиотек.",
+                descExploringAI: "Освещает основы линейного уравнения (y = a + bx) и интерпретацию наклона и смещения. Включает практические примеры и код на Python для реализации."
+            }
+        };
+
+        function setLanguage(lang) {
+            // Update active button state
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase() === lang) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update text content
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>
