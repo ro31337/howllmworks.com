@@ -180,6 +180,38 @@
         .edu-text ul { margin: 0; padding-left: 20px; }
         .edu-text li { margin-bottom: 4px; }
 
+        /* Toggle Switch (Apple style) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
         /* Main Content */
         .content {
             padding: 20px;
@@ -306,12 +338,25 @@
     </div>
 
     <div class="content">
-        <!-- Formula Container (Left aligned) -->
-        <div id="formula-container" style="width: 100%; max-width: 900px; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 60px; font-size: 1.1rem; color: #2c3e50; position: relative;">
-            <div id="formula-buffer-1" style="position: absolute; opacity: 1; transition: opacity 0.1s ease-in-out; text-align: left;">
-                $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
+        <!-- Formula Container -->
+        <div id="formula-container" style="width: 100%; max-width: 900px; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 1.1rem; color: #2c3e50; position: relative;">
+            
+            <!-- Formula Wrapper -->
+            <div style="position: relative; height: 100%; flex-grow: 1;">
+                <div id="formula-buffer-1" style="position: absolute; top: 50%; transform: translateY(-50%); left: 0; opacity: 1; transition: opacity 0.1s ease-in-out; text-align: left;">
+                    $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
+                </div>
+                <div id="formula-buffer-2" style="position: absolute; top: 50%; transform: translateY(-50%); left: 0; opacity: 0; transition: opacity 0.1s ease-in-out; text-align: left;"></div>
             </div>
-            <div id="formula-buffer-2" style="position: absolute; opacity: 0; transition: opacity 0.1s ease-in-out; text-align: left;"></div>
+
+            <!-- Toggle Switch -->
+            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                <span style="font-size: 0.8rem; color: #95a5a6; font-weight: 500;">Values</span>
+                <label class="switch">
+                    <input type="checkbox" id="calcToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
 
         <div class="viz-card">
@@ -338,6 +383,7 @@
     // MathJax Rendering Lock & Buffer State
     let isMathJaxRendering = false;
     let activeBufferIdx = 1;
+    let showCalc = false; // Default hidden
 
     // Function parameters: L(w) = 0.03*w^4 - 0.5*w^2 - 0.6*w + 6
     function getLoss(x) {
@@ -359,14 +405,16 @@
         
         if (!activeEl || !nextEl) return;
 
-        const nextW = currentW - lr * grad;
-        const fW = currentW.toFixed(2);
-        const fLr = lr.toFixed(2);
-        const fGrad = grad.toFixed(2);
-        const fNext = nextW.toFixed(2);
+        let latex = `$$ w_{new} = w - \\alpha \\frac{\\partial Loss}{\\partial w} $$`;
         
-        // Construct LaTeX
-        const latex = `$$ w_{new} = w - \\alpha \\frac{\\partial Loss}{\\partial w} = \\color{#2980b9}{ ${fW} - ${fLr} \\cdot (${fGrad}) = ${fNext} } $$`;
+        if (showCalc) {
+            const nextW = currentW - lr * grad;
+            const fW = currentW.toFixed(2);
+            const fLr = lr.toFixed(2);
+            const fGrad = grad.toFixed(2);
+            const fNext = nextW.toFixed(2);
+            latex = `$$ w_{new} = w - \\alpha \\frac{\\partial Loss}{\\partial w} = \\color{#2980b9}{ ${fW} - ${fLr} \\cdot (${fGrad}) = ${fNext} } $$`;
+        }
         
         nextEl.innerHTML = latex;
         isMathJaxRendering = true;
@@ -649,6 +697,12 @@
         updateFormula(visualW, alpha, getGradient(visualW));
     });
     els.preset.addEventListener('change', (e) => applyPreset(e.target.value));
+
+    // Toggle formula calculation visibility
+    document.getElementById('calcToggle').addEventListener('change', (e) => {
+        showCalc = e.target.checked;
+        updateFormula(visualW, alpha, getGradient(visualW));
+    });
 
     resize();
     applyPreset('good');
