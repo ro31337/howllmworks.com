@@ -304,8 +304,12 @@
 
     <div class="content">
         <div class="viz-card">
-            <div id="formula-overlay" style="position: absolute; top: 10px; left: 140px; font-size: 1.1rem; color: #2c3e50; pointer-events: none; z-index: 5; white-space: nowrap;">
-                $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
+            <!-- Double buffer container for smooth formula updates -->
+            <div id="formula-container" style="position: absolute; top: 10px; left: 140px; font-size: 1.1rem; color: #2c3e50; pointer-events: none; z-index: 5; white-space: nowrap;">
+                <div id="formula-buffer-1" style="position: absolute; top: 0; left: 0; opacity: 1; transition: opacity 0.1s ease-in-out;">
+                    $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
+                </div>
+                <div id="formula-buffer-2" style="position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.1s ease-in-out;"></div>
             </div>
             <canvas id="mainCanvas"></canvas>
             <div class="overlay-msg" id="statusMsg">Converged!</div>
@@ -327,8 +331,9 @@
     let isRunning = false;
     let iteration = 0;
     
-    // MathJax Rendering Lock
+    // MathJax Rendering Lock & Buffer State
     let isMathJaxRendering = false;
+    let activeBufferIdx = 1;
 
     // Function parameters: L(w) = 0.03*w^4 - 0.5*w^2 - 0.6*w + 6
     function getLoss(x) {
@@ -339,28 +344,33 @@
         return 0.12 * Math.pow(x, 3) - 1.0 * x - 0.6;
     }
     
-    // Update MathJax Formula
+    // Update MathJax Formula with Double Buffering
     function updateFormula(currentW, lr, grad) {
         if (isMathJaxRendering) return;
         if (typeof MathJax === 'undefined' || !MathJax.typesetPromise) return;
         
-        const nextW = currentW - lr * grad;
-        const formulaEl = document.getElementById('formula-overlay');
+        const nextBufferIdx = activeBufferIdx === 1 ? 2 : 1;
+        const activeEl = document.getElementById(`formula-buffer-${activeBufferIdx}`);
+        const nextEl = document.getElementById(`formula-buffer-${nextBufferIdx}`);
         
-        // Format numbers
+        if (!activeEl || !nextEl) return;
+
+        const nextW = currentW - lr * grad;
         const fW = currentW.toFixed(2);
         const fLr = lr.toFixed(2);
         const fGrad = grad.toFixed(2);
         const fNext = nextW.toFixed(2);
         
         // Construct LaTeX
-        // Use class for color to avoid conflicts, or direct latex color
         const latex = `$$ w_{new} = w - \\alpha \\frac{\\partial Loss}{\\partial w} = \\color{#2980b9}{ ${fW} - ${fLr} \\cdot (${fGrad}) = ${fNext} } $$`;
         
-        formulaEl.innerHTML = latex;
-        
+        nextEl.innerHTML = latex;
         isMathJaxRendering = true;
-        MathJax.typesetPromise([formulaEl]).then(() => {
+        
+        MathJax.typesetPromise([nextEl]).then(() => {
+            nextEl.style.opacity = '1';
+            activeEl.style.opacity = '0';
+            activeBufferIdx = nextBufferIdx;
             isMathJaxRendering = false;
         }).catch(err => {
             isMathJaxRendering = false;
@@ -533,11 +543,6 @@
         els.lossVal.textContent = getLoss(visualW).toFixed(3);
         const g = getGradient(visualW);
         els.gradVal.textContent = `${g.toFixed(3)} (${g > 0 ? '+' : '-'})`;
-        
-        // Update the formula overlay
-        // Use a throttle or check if visualW changed significantly to avoid spamming MathJax?
-        // For now, the lock inside updateFormula handles concurrency.
-        updateFormula(visualW, alpha, g);
     }
 
     // Simulation & Animation
@@ -566,7 +571,10 @@
         const diff = targetW - visualW;
         
         if (Math.abs(diff) < 0.001) {
-            visualW = targetW;
+            if (visualW !== targetW) {
+                visualW = targetW;
+                updateFormula(visualW, alpha, getGradient(visualW));
+            }
             if (isRunning) calculateNextStep();
         } else {
             visualW += diff * lerpFactor;
@@ -608,6 +616,7 @@
         history = [];
         iteration = 0;
         hideMessage();
+        updateFormula(visualW, alpha, getGradient(visualW));
     }
 
     const presets = {
@@ -633,11 +642,16 @@
         alpha = sliderToAlpha(parseFloat(e.target.value));
         els.lrValue.textContent = alpha.toFixed(3);
         els.preset.value = 'custom';
+        updateFormula(visualW, alpha, getGradient(visualW));
     });
     els.preset.addEventListener('change', (e) => applyPreset(e.target.value));
 
     resize();
     applyPreset('good');
+    // Ensure initial formula render after a short delay for MathJax to load
+    setTimeout(() => {
+        updateFormula(visualW, alpha, getGradient(visualW));
+    }, 500);
     requestAnimationFrame(animate);
 </script>
 
