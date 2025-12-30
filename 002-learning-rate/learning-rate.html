@@ -304,7 +304,7 @@
 
     <div class="content">
         <div class="viz-card">
-            <div id="formula-overlay" style="position: absolute; top: 10px; left: 140px; font-size: 1.2rem; color: #2c3e50; pointer-events: none; z-index: 5;">
+            <div id="formula-overlay" style="position: absolute; top: 10px; left: 140px; font-size: 1.1rem; color: #2c3e50; pointer-events: none; z-index: 5; white-space: nowrap;">
                 $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
             </div>
             <canvas id="mainCanvas"></canvas>
@@ -327,6 +327,9 @@
     let isRunning = false;
     let iteration = 0;
     
+    // MathJax Rendering Lock
+    let isMathJaxRendering = false;
+
     // Function parameters: L(w) = 0.03*w^4 - 0.5*w^2 - 0.6*w + 6
     function getLoss(x) {
         return 0.03 * Math.pow(x, 4) - 0.5 * Math.pow(x, 2) - 0.6 * x + 6;
@@ -334,6 +337,34 @@
 
     function getGradient(x) {
         return 0.12 * Math.pow(x, 3) - 1.0 * x - 0.6;
+    }
+    
+    // Update MathJax Formula
+    function updateFormula(currentW, lr, grad) {
+        if (isMathJaxRendering) return;
+        if (typeof MathJax === 'undefined' || !MathJax.typesetPromise) return;
+        
+        const nextW = currentW - lr * grad;
+        const formulaEl = document.getElementById('formula-overlay');
+        
+        // Format numbers
+        const fW = currentW.toFixed(2);
+        const fLr = lr.toFixed(2);
+        const fGrad = grad.toFixed(2);
+        const fNext = nextW.toFixed(2);
+        
+        // Construct LaTeX
+        // Use class for color to avoid conflicts, or direct latex color
+        const latex = `$$ w_{new} = w - \\alpha \\frac{\\partial Loss}{\\partial w} = \\color{#2980b9}{ ${fW} - ${fLr} \\cdot (${fGrad}) = ${fNext} } $$`;
+        
+        formulaEl.innerHTML = latex;
+        
+        isMathJaxRendering = true;
+        MathJax.typesetPromise([formulaEl]).then(() => {
+            isMathJaxRendering = false;
+        }).catch(err => {
+            isMathJaxRendering = false;
+        });
     }
 
     // Visualization bounds
@@ -502,6 +533,11 @@
         els.lossVal.textContent = getLoss(visualW).toFixed(3);
         const g = getGradient(visualW);
         els.gradVal.textContent = `${g.toFixed(3)} (${g > 0 ? '+' : '-'})`;
+        
+        // Update the formula overlay
+        // Use a throttle or check if visualW changed significantly to avoid spamming MathJax?
+        // For now, the lock inside updateFormula handles concurrency.
+        updateFormula(visualW, alpha, g);
     }
 
     // Simulation & Animation
