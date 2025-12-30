@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Rate Visualization - Gradient Descent | How LLM Works</title>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--card-bg);
+            padding: 25px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+            color: var(--text-color);
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .value-badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        /* Slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Select styling */
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            cursor: pointer;
+            background-color: #f8f9fa;
+        }
+
+        /* Buttons */
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-secondary { background: #e0e0e0; color: var(--text-color); }
+        .btn-secondary:hover { background: #d0d0d0; }
+        .btn-active { background: #e74c3c !important; color: white !important; }
+
+        /* Stats Panel */
+        .stats-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #eee;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        .stat-row:last-child { margin-bottom: 0; }
+        .stat-label { color: var(--secondary-color); }
+        .stat-val { font-family: monospace; font-weight: 700; color: var(--text-color); }
+
+        /* Educational Text */
+        .edu-text {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #555;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+        }
+        .edu-text h4 { margin: 0 0 8px 0; font-size: 0.9rem; }
+        .edu-text ul { margin: 0; padding-left: 20px; }
+        .edu-text li { margin-bottom: 4px; }
+
+        /* Main Content */
+        .content {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f2f5;
+            position: relative;
+        }
+
+        .viz-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            width: 100%;
+            max-width: 900px;
+            height: 100%;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Overlay message for completion/divergence */
+        .overlay-msg {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .overlay-msg.visible { opacity: 1; }
+
+        @media (max-width: 800px) {
+            .main-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .sidebar { max-height: 35vh; padding: 15px; gap: 15px; }
+            .content { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-layout">
+    <div class="sidebar">
+        <div>
+            <h1>Learning Rate</h1>
+            <div class="subtitle">Gradient Descent Explorer</div>
+        </div>
+
+        <div class="control-group">
+            <label for="presetSelect">Scenario</label>
+            <select id="presetSelect">
+                <option value="custom">Custom</option>
+                <option value="small">Too Small</option>
+                <option value="good" selected>Just Right</option>
+                <option value="large">Too Large</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>
+                Learning Rate (α)
+                <span class="value-badge" id="lrValue">0.10</span>
+            </label>
+            <input type="range" id="lrSlider" min="1" max="100" value="50">
+        </div>
+
+        <div class="button-grid">
+            <button class="btn-secondary" id="resetBtn">⟲ Reset</button>
+            <button class="btn-primary" id="toggleBtn">▶ Run</button>
+        </div>
+        <button class="btn-secondary" id="stepBtn" style="width: 100%">Step (+1)</button>
+
+        <div class="stats-panel">
+            <div class="stat-row">
+                <span class="stat-label">Iteration:</span>
+                <span class="stat-val" id="iterVal">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Parameter w:</span>
+                <span class="stat-val" id="wVal">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Loss L(w):</span>
+                <span class="stat-val" id="lossVal">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Gradient:</span>
+                <span class="stat-val" id="gradVal">0.00</span>
+            </div>
+        </div>
+
+        <div class="edu-text">
+            <h4>How it works</h4>
+            <ul>
+                <li><strong>Curve:</strong> The "Loss Landscape". We want to find the bottom (minimum loss).</li>
+                <li><strong>Gradient:</strong> The slope. Tells us which way is "down".</li>
+                <li><strong>Alpha (α):</strong> The step size.
+                    <ul>
+                        <li><span style="color:#e67e22">Small</span>: Safe but slow.</li>
+                        <li><span style="color:#27ae60">Good</span>: Fast convergence.</li>
+                        <li><span style="color:#c0392b">Large</span>: Overshoots, unstable.</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="viz-card">
+            <canvas id="mainCanvas"></canvas>
+            <div class="overlay-msg" id="statusMsg">Converged!</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuration
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Physical simulation state
+    let w = -3.5; // Current mathematical position
+    let visualW = -3.5; // Smoothly interpolated position
+    let targetW = -3.5; // Next target position
+    
+    let history = []; // Array of points {w, loss}
+    let isRunning = false;
+    let iteration = 0;
+    
+    // Function parameters: L(w) = 0.03*w^4 - 0.5*w^2 - 0.6*w + 6
+    function getLoss(x) {
+        return 0.03 * Math.pow(x, 4) - 0.5 * Math.pow(x, 2) - 0.6 * x + 6;
+    }
+
+    function getGradient(x) {
+        return 0.12 * Math.pow(x, 3) - 1.0 * x - 0.6;
+    }
+
+    // Visualization bounds
+    const VIEW = {
+        wMin: -5, wMax: 5,
+        lMin: 0, lMax: 12,
+        padding: 40
+    };
+
+    // UI Elements
+    const els = {
+        lrSlider: document.getElementById('lrSlider'),
+        lrValue: document.getElementById('lrValue'),
+        preset: document.getElementById('presetSelect'),
+        resetBtn: document.getElementById('resetBtn'),
+        toggleBtn: document.getElementById('toggleBtn'),
+        stepBtn: document.getElementById('stepBtn'),
+        iterVal: document.getElementById('iterVal'),
+        wVal: document.getElementById('wVal'),
+        lossVal: document.getElementById('lossVal'),
+        gradVal: document.getElementById('gradVal'),
+        statusMsg: document.getElementById('statusMsg')
+    };
+
+    // Logarithmic slider mapping
+    function sliderToAlpha(val) {
+        const minv = Math.log(0.005);
+        const maxv = Math.log(1.5);
+        const scale = (maxv - minv) / 100;
+        return Math.exp(minv + scale * val);
+    }
+    
+    function alphaToSlider(alpha) {
+        const minv = Math.log(0.005);
+        const maxv = Math.log(1.5);
+        const scale = (maxv - minv) / 100;
+        return (Math.log(alpha) - minv) / scale;
+    }
+
+    let alpha = 0.1; 
+
+    // Resize handling
+    let width, height;
+    function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        width = canvas.width;
+        height = canvas.height;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        width /= window.devicePixelRatio;
+        height /= window.devicePixelRatio;
+    }
+    window.addEventListener('resize', resize);
+
+    // Coord transforms
+    function toScreenX(val) {
+        const pct = (val - VIEW.wMin) / (VIEW.wMax - VIEW.wMin);
+        return VIEW.padding + pct * (width - 2 * VIEW.padding);
+    }
+    function toScreenY(val) {
+        const pct = (val - VIEW.lMin) / (VIEW.lMax - VIEW.lMin);
+        return height - (VIEW.padding + pct * (height - 2 * VIEW.padding));
+    }
+
+    // Drawing
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        // 1. Grid & Axes
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for(let l=0; l<=VIEW.lMax; l+=2) {
+            const y = toScreenY(l);
+            ctx.moveTo(VIEW.padding, y);
+            ctx.lineTo(width - VIEW.padding, y);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = '#95a5a6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const y0 = toScreenY(0);
+        ctx.moveTo(VIEW.padding, y0);
+        ctx.lineTo(width - VIEW.padding, y0);
+        const x0 = toScreenX(0);
+        ctx.moveTo(x0, toScreenY(VIEW.lMin));
+        ctx.lineTo(x0, toScreenY(VIEW.lMax));
+        ctx.stroke();
+
+        ctx.fillStyle = '#7f8c8d';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('w (Parameter)', width - 100, y0 - 10);
+        ctx.fillText('Loss', x0 + 10, toScreenY(VIEW.lMax) + 20);
+
+        // 1.5 Minima Labels (subtle)
+        const minima = [
+            { w: -2.51, label: 'Local Minimum' },
+            { w: 3.16, label: 'Global Minimum' }
+        ];
+        
+        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.fillStyle = '#95a5a6';
+        ctx.textAlign = 'center';
+        ctx.font = '10px sans-serif';
+
+        minima.forEach(m => {
+            const mx = toScreenX(m.w);
+            const my = toScreenY(getLoss(m.w));
+            
+            ctx.beginPath();
+            ctx.moveTo(mx, my);
+            ctx.lineTo(mx, my + 30);
+            ctx.stroke();
+            ctx.fillText(m.label, mx, my + 45);
+        });
+        ctx.setLineDash([]);
+        ctx.textAlign = 'left'; // Reset
+
+        // 2. The Curve
+        ctx.strokeStyle = '#3498db'; 
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        const stepSize = (VIEW.wMax - VIEW.wMin) / 300;
+        for (let x = VIEW.wMin; x <= VIEW.wMax; x += stepSize) {
+            const y = getLoss(x);
+            const sx = toScreenX(x);
+            const sy = toScreenY(y);
+            if (x === VIEW.wMin) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+
+        // 3. History Path
+        if (history.length > 0) {
+            ctx.strokeStyle = 'rgba(231, 76, 60, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(toScreenX(history[0].w), toScreenY(history[0].loss));
+            for (let i = 1; i < history.length; i++) {
+                ctx.lineTo(toScreenX(history[i].w), toScreenY(history[i].loss));
+            }
+            ctx.lineTo(toScreenX(visualW), toScreenY(getLoss(visualW)));
+            ctx.stroke();
+        }
+
+        // 4. Current Point (visualW)
+        const cx = toScreenX(visualW);
+        const cy = toScreenY(getLoss(visualW));
+        
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        updateUI();
+    }
+
+    function updateUI() {
+        els.iterVal.textContent = iteration;
+        els.wVal.textContent = visualW.toFixed(3);
+        els.lossVal.textContent = getLoss(visualW).toFixed(3);
+        const g = getGradient(visualW);
+        els.gradVal.textContent = `${g.toFixed(3)} (${g > 0 ? '+' : '-'})`;
+    }
+
+    // Simulation & Animation
+    function calculateNextStep() {
+        if (Math.abs(targetW) > 10) return;
+        
+        const grad = getGradient(targetW);
+        history.push({ w: targetW, loss: getLoss(targetW) });
+        if (history.length > 100) history.shift();
+        
+        targetW = targetW - alpha * grad;
+        iteration++;
+        
+        if (Math.abs(grad) < 0.005) {
+            showMessage("Converged!", "success");
+            stop();
+        } else if (Math.abs(targetW) > 10) {
+            showMessage("Diverged!", "danger");
+            stop();
+        }
+    }
+
+    function animate() {
+        // Interpolate visualW towards targetW for smooth motion
+        const lerpFactor = 0.15;
+        const diff = targetW - visualW;
+        
+        if (Math.abs(diff) < 0.001) {
+            visualW = targetW;
+            if (isRunning) calculateNextStep();
+        } else {
+            visualW += diff * lerpFactor;
+        }
+
+        draw();
+        requestAnimationFrame(animate);
+    }
+
+    function showMessage(text, type) {
+        els.statusMsg.textContent = text;
+        els.statusMsg.style.backgroundColor = type === 'success' ? '#27ae60' : '#c0392b';
+        els.statusMsg.classList.add('visible');
+    }
+    
+    function hideMessage() {
+        els.statusMsg.classList.remove('visible');
+    }
+
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        els.toggleBtn.textContent = '⏸ Pause';
+        els.toggleBtn.classList.add('btn-active');
+        if (visualW === targetW) calculateNextStep();
+    }
+
+    function stop() {
+        isRunning = false;
+        els.toggleBtn.textContent = '▶ Run';
+        els.toggleBtn.classList.remove('btn-active');
+    }
+
+    function reset() {
+        stop();
+        w = -3.5;
+        visualW = -3.5;
+        targetW = -3.5;
+        history = [];
+        iteration = 0;
+        hideMessage();
+    }
+
+    const presets = {
+        'small': { lr: 0.01, w: -3.5 },
+        'good': { lr: 0.15, w: -3.5 },
+        'large': { lr: 0.85, w: -3.5 },
+        'custom': { lr: 0.1, w: -3.5 }
+    };
+
+    function applyPreset(name) {
+        if (name === 'custom') return;
+        const p = presets[name];
+        alpha = p.lr;
+        els.lrSlider.value = alphaToSlider(alpha);
+        els.lrValue.textContent = alpha.toFixed(3);
+        reset();
+    }
+
+    els.resetBtn.addEventListener('click', reset);
+    els.toggleBtn.addEventListener('click', () => isRunning ? stop() : start());
+    els.stepBtn.addEventListener('click', () => { stop(); calculateNextStep(); });
+    els.lrSlider.addEventListener('input', (e) => {
+        alpha = sliderToAlpha(parseFloat(e.target.value));
+        els.lrValue.textContent = alpha.toFixed(3);
+        els.preset.value = 'custom';
+    });
+    els.preset.addEventListener('change', (e) => applyPreset(e.target.value));
+
+    resize();
+    applyPreset('good');
+    requestAnimationFrame(animate);
+</script>
+
+</script>
+</body>
+</html>
