@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning Rate Visualization - Gradient Descent | How LLM Works</title>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
             --bg-color: #fafafa;
@@ -303,6 +304,9 @@
 
     <div class="content">
         <div class="viz-card">
+            <div id="formula-overlay" style="position: absolute; top: 10px; left: 140px; font-size: 1.2rem; color: #2c3e50; pointer-events: none; z-index: 5;">
+                $$ w_{new} = w - \alpha \frac{\partial L}{\partial w} $$
+            </div>
             <canvas id="mainCanvas"></canvas>
             <div class="overlay-msg" id="statusMsg">Converged!</div>
         </div>
