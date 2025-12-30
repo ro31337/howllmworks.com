@@ -184,10 +184,13 @@
         .content {
             padding: 20px;
             display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: flex-start;
             justify-content: center;
-            align-items: center;
             background-color: #f0f2f5;
             position: relative;
+            margin-top: -20px;
         }
 
         .viz-card {
@@ -303,14 +306,15 @@
     </div>
 
     <div class="content">
-        <div class="viz-card">
-            <!-- Double buffer container for smooth formula updates -->
-            <div id="formula-container" style="position: absolute; top: 0px; left: 140px; font-size: 1.1rem; color: #2c3e50; pointer-events: none; z-index: 5; white-space: nowrap;">
-                <div id="formula-buffer-1" style="position: absolute; top: 0; left: 0; opacity: 1; transition: opacity 0.1s ease-in-out;">
-                    $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
-                </div>
-                <div id="formula-buffer-2" style="position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.1s ease-in-out;"></div>
+        <!-- Formula Container (Left aligned) -->
+        <div id="formula-container" style="width: 100%; max-width: 900px; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 60px; font-size: 1.1rem; color: #2c3e50; position: relative;">
+            <div id="formula-buffer-1" style="position: absolute; opacity: 1; transition: opacity 0.1s ease-in-out; text-align: left;">
+                $$ w_{new} = w - \alpha \frac{\partial Loss}{\partial w} $$
             </div>
+            <div id="formula-buffer-2" style="position: absolute; opacity: 0; transition: opacity 0.1s ease-in-out; text-align: left;"></div>
+        </div>
+
+        <div class="viz-card">
             <canvas id="mainCanvas"></canvas>
             <div class="overlay-msg" id="statusMsg">Converged!</div>
         </div>
