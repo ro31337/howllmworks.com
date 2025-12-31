@@ -160,6 +160,7 @@
         .badge-optimization { background: #dcfce7; color: #166534; }
         .badge-metrics { background: #f3e8ff; color: #7c3aed; }
         .badge-reference { background: #fce7f3; color: #be185d; }
+        .badge-learningrate { background: #fef9c3; color: #854d0e; }
 
         @media (max-width: 768px) {
             .card {
@@ -258,6 +259,17 @@
             </div>
         </a>
 
+        <!-- LEARNING RATE MODULE -->
+        <div class="section-title" style="margin-top: 40px;" data-key="moduleLearnRate">Module 2: Learning Rate</div>
+
+        <a href="002-learning-rate/010-learning-rate.html" class="card">
+            <span class="badge badge-learningrate">Learning Rate</span>
+            <div class="card-title" data-key="titleLR010">Learning Rate Explorer</div>
+            <div class="card-desc" data-key="descLR010">
+                Interactive visualization of the learning rate hyperparameter. Experiment with different α values to see how step size affects gradient descent: too small leads to slow convergence, too large causes divergence.
+            </div>
+        </a>
+
     </div>
 
     <script>
@@ -293,7 +305,11 @@
                 desc070: "A quick reference card with mathematical formulas for all three error metrics. Includes explanations of when and why to use each metric, with pros and cons clearly explained.",
 
                 title500: "Useful Resources",
-                desc500: "Curated external links to deepen your understanding: intuitive explanations, Python implementations from scratch, and in-depth articles on linear regression fundamentals."
+                desc500: "Curated external links to deepen your understanding: intuitive explanations, Python implementations from scratch, and in-depth articles on linear regression fundamentals.",
+
+                moduleLearnRate: "Module 2: Learning Rate",
+                titleLR010: "Learning Rate Explorer",
+                descLR010: "Interactive visualization of the learning rate hyperparameter. Experiment with different α values to see how step size affects gradient descent: too small leads to slow convergence, too large causes divergence."
             },
             ru: {
                 mainTitle: "Модуль линейной регрессии",
@@ -326,7 +342,11 @@
                 desc070: "Справочная карточка с математическими формулами всех трёх метрик ошибки. Объяснения когда и почему использовать каждую метрику, с плюсами и минусами.",
 
                 title500: "Полезные ресурсы",
-                desc500: "Подборка внешних ссылок для углубления понимания: интуитивные объяснения, реализации на Python с нуля, статьи об основах линейной регрессии."
+                desc500: "Подборка внешних ссылок для углубления понимания: интуитивные объяснения, реализации на Python с нуля, статьи об основах линейной регрессии.",
+
+                moduleLearnRate: "Модуль 2: Learning Rate",
+                titleLR010: "Исследователь Learning Rate",
+                descLR010: "Интерактивная визуализация гиперпараметра learning rate. Экспериментируйте с разными значениями α: слишком маленький шаг — медленная сходимость, слишком большой — расходимость."
             }
         };
 
