@@ -358,35 +358,36 @@
         school: {
             label: 'School',
             formula: '$$ z = \\beta_0 + \\beta_1 x $$',
-            desc: '<strong>Intuition:</strong> Simplest form. Just a line equation. $\\beta_0$ shifts left/right, $\\beta_1$ controls steepness.',
+            desc: '<strong>Интуиция:</strong> Одна фича, одна прямая. Самый простой вид.',
             sliders: [
-                { key: 'w0', label: 'β₀ (Intercept)', min: -5, max: 5, step: 0.1 },
-                { key: 'w1', label: 'β₁ (Slope)', min: -5, max: 5, step: 0.1 }
+                { key: 'w0', label: 'β₀', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: 'β₁', min: -5, max: 5, step: 0.1 }
             ]
         },
         stats: {
             label: 'Stats',
-            formula: '$$ z = \\beta_0 + \\beta_1 x_1 + \\dots $$',
-            desc: '<strong>Regression:</strong> In statistics, we emphasize the additive nature of effects. Adding more variables ($\\beta_2 x_2$) just shifts the curve for $x_1$.',
+            formula: '$$ z = \\beta_0 + \\beta_1 x_1 + \\beta_2 x_2 + \\dots $$',
+            desc: '<strong>Регрессия:</strong> Несколько фич, каждая со своим весом.',
             sliders: [
                 { key: 'w0', label: 'β₀', min: -5, max: 5, step: 0.1 },
-                { key: 'w1', label: 'β₁ (for x₁)', min: -5, max: 5, step: 0.1 },
-                { key: 'w2', label: 'β₂ (Context)', min: -5, max: 5, step: 0.1 }
+                { key: 'w1', label: 'β₁', min: -5, max: 5, step: 0.1 },
+                { key: 'w2', label: 'β₂', min: -5, max: 5, step: 0.1 }
             ]
         },
         ml: {
             label: 'ML',
-            formula: '$$ z = w \\cdot x + b $$',
-            desc: '<strong>Machine Learning:</strong> We use $w$ (weights) and $b$ (bias). It is the exact same math, just different variable names.',
+            formula: '$$ z = w_1 x_1 + w_2 x_2 + \\dots + w_p x_p + b $$',
+            desc: '<strong>ML / Нейросети:</strong> То же самое, просто другие буквы.',
             sliders: [
-                { key: 'w0', label: 'b (Bias)', min: -5, max: 5, step: 0.1 },
-                { key: 'w1', label: 'w (Weight)', min: -5, max: 5, step: 0.1 }
+                { key: 'w0', label: 'b', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: 'w₁', min: -5, max: 5, step: 0.1 },
+                { key: 'w2', label: 'w₂', min: -5, max: 5, step: 0.1 }
             ]
         },
         linalg: {
             label: 'LinAlg',
-            formula: '$$ z = \\mathbf{w}^T\\mathbf{x} + b $$',
-            desc: '<strong>Vector Form:</strong> Concise notation used in GPU computing. $\\mathbf{w}^T\\mathbf{x}$ is the dot product.',
+            formula: '$$ z = X\\mathbf{w} + b $$',
+            desc: '<strong>Векторная форма:</strong> Удобно считать на GPU.',
             sliders: [
                 { key: 'w0', label: 'b', min: -5, max: 5, step: 0.1 },
                 { key: 'w1', label: 'w[0]', min: -5, max: 5, step: 0.1 },
@@ -461,10 +462,9 @@
 
     function calculateZ(x) {
         let z = state.w0 + state.w1 * x;
-        // For Stats and LinAlg modes, we simulate a "context" effect from w2
-        // Assuming x2 is fixed at 1.0 for simplicity in visualization to show w2's effect as a shift
-        if (state.mode === 'stats' || state.mode === 'linalg') {
-            z += state.w2 * 1.0; 
+        // For modes with multiple weights, add w2 effect (x2 fixed at 1.0 for visualization)
+        if (state.mode === 'stats' || state.mode === 'ml' || state.mode === 'linalg') {
+            z += state.w2 * 1.0;
         }
         return z;
     }
