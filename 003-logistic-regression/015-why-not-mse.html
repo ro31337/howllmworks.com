@@ -591,6 +591,10 @@
         const mSteps = 100;
         const bSteps = 100;
 
+        // Clear existing surfaces
+        mseSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
+        logLossSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
+
         // Generate SSE surface with sqrt-scale to reveal bumps
         for (let bi = 0; bi <= bSteps; bi++) {
             const b = bRange.min + (bi / bSteps) * (bRange.max - bRange.min);
@@ -1042,7 +1046,181 @@
         ctx.textAlign = 'left';
         ctx.fillText('x', width - margin.right - 10, toY(0) - 5);
         ctx.fillText('P(y=1)', margin.left + 5, margin.top + 12);
+
+        // Draw drag hint
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('Drag to move, double-click to flip class', width - margin.right, margin.top + 12);
     }
+
+    // ==========================================
+    // DRAG & DROP FOR DATA POINTS
+    // ==========================================
+    let draggedPoint = -1;
+    let sigmoidPlotParams = null;
+
+    function getSigmoidPlotParams() {
+        const canvas = sigmoidCanvas;
+        const margin = { left: 50, right: 20, top: 20, bottom: 30 };
+        const plotW = canvas.width - margin.left - margin.right;
+        const plotH = canvas.height - margin.top - margin.bottom;
+        const xMin = -6, xMax = 6;
+        const yMin = -0.1, yMax = 1.1;
+
+        return {
+            margin, plotW, plotH, xMin, xMax, yMin, yMax,
+            toX: (x) => margin.left + (x - xMin) / (xMax - xMin) * plotW,
+            toY: (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH,
+            fromX: (px) => xMin + (px - margin.left) / plotW * (xMax - xMin),
+            fromY: (py) => yMax - (py - margin.top) / plotH * (yMax - yMin)
+        };
+    }
+
+    function findNearestPoint(mouseX, mouseY) {
+        const p = getSigmoidPlotParams();
+        let nearest = -1;
+        let minDist = 20; // pixels threshold
+
+        for (let i = 0; i < data.x.length; i++) {
+            const px = p.toX(data.x[i]);
+            const py = p.toY(data.y[i]);
+            const dist = Math.sqrt((mouseX - px) ** 2 + (mouseY - py) ** 2);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = i;
+            }
+        }
+        return nearest;
+    }
+
+    function onDataChanged() {
+        // Regenerate surfaces with new data
+        initSurfaces();
+        // Reset simulation
+        resetSimulation();
+    }
+
+    // Throttled surface update during drag
+    let lastSurfaceUpdate = 0;
+    function updateSurfacesDuringDrag() {
+        const now = Date.now();
+        if (now - lastSurfaceUpdate > 100) { // Max 10 updates per second
+            initSurfaces();
+            // Keep ball at start position during drag - reset both visual and target
+            mseState.visualM = mseState.targetM = globalState.startM;
+            mseState.visualB = mseState.targetB = globalState.startB;
+            mseState.history = [];
+            mseState.epoch = 0;
+            mseState.isConverged = false;
+
+            logLossState.visualM = logLossState.targetM = globalState.startM;
+            logLossState.visualB = logLossState.targetB = globalState.startB;
+            logLossState.history = [];
+            logLossState.epoch = 0;
+            logLossState.isConverged = false;
+
+            lastSurfaceUpdate = now;
+        }
+    }
+
+    sigmoidCanvas.addEventListener('mousedown', (e) => {
+        const rect = sigmoidCanvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left) * (sigmoidCanvas.width / rect.width);
+        const mouseY = (e.clientY - rect.top) * (sigmoidCanvas.height / rect.height);
+
+        draggedPoint = findNearestPoint(mouseX, mouseY);
+        if (draggedPoint >= 0) {
+            sigmoidCanvas.style.cursor = 'grabbing';
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (draggedPoint < 0) return;
+
+        const rect = sigmoidCanvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left) * (sigmoidCanvas.width / rect.width);
+        const p = getSigmoidPlotParams();
+
+        // Convert to data coordinates (only x changes)
+        let newX = p.fromX(mouseX);
+        newX = Math.max(-5.5, Math.min(5.5, newX)); // Clamp
+
+        data.x[draggedPoint] = Math.round(newX * 2) / 2; // Snap to 0.5
+        renderSigmoidPlot();
+        updateSurfacesDuringDrag(); // Update 3D surfaces in real-time
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (draggedPoint >= 0) {
+            sigmoidCanvas.style.cursor = '';
+            onDataChanged();
+            draggedPoint = -1;
+        }
+    });
+
+    // Touch support
+    sigmoidCanvas.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const rect = sigmoidCanvas.getBoundingClientRect();
+        const mouseX = (touch.clientX - rect.left) * (sigmoidCanvas.width / rect.width);
+        const mouseY = (touch.clientY - rect.top) * (sigmoidCanvas.height / rect.height);
+
+        draggedPoint = findNearestPoint(mouseX, mouseY);
+        if (draggedPoint >= 0) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    sigmoidCanvas.addEventListener('touchmove', (e) => {
+        if (draggedPoint < 0) return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const rect = sigmoidCanvas.getBoundingClientRect();
+        const mouseX = (touch.clientX - rect.left) * (sigmoidCanvas.width / rect.width);
+        const p = getSigmoidPlotParams();
+
+        let newX = p.fromX(mouseX);
+        newX = Math.max(-5.5, Math.min(5.5, newX));
+
+        data.x[draggedPoint] = Math.round(newX * 2) / 2;
+        renderSigmoidPlot();
+        updateSurfacesDuringDrag(); // Update 3D surfaces in real-time
+    }, { passive: false });
+
+    sigmoidCanvas.addEventListener('touchend', () => {
+        if (draggedPoint >= 0) {
+            onDataChanged();
+            draggedPoint = -1;
+        }
+    });
+
+    // Hover cursor
+    sigmoidCanvas.addEventListener('mousemove', (e) => {
+        if (draggedPoint >= 0) return;
+
+        const rect = sigmoidCanvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left) * (sigmoidCanvas.width / rect.width);
+        const mouseY = (e.clientY - rect.top) * (sigmoidCanvas.height / rect.height);
+
+        const nearest = findNearestPoint(mouseX, mouseY);
+        sigmoidCanvas.style.cursor = nearest >= 0 ? 'grab' : '';
+    });
+
+    // Double-click to toggle class (0↔1)
+    sigmoidCanvas.addEventListener('dblclick', (e) => {
+        const rect = sigmoidCanvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left) * (sigmoidCanvas.width / rect.width);
+        const mouseY = (e.clientY - rect.top) * (sigmoidCanvas.height / rect.height);
+
+        const nearest = findNearestPoint(mouseX, mouseY);
+        if (nearest >= 0) {
+            data.y[nearest] = data.y[nearest] === 0 ? 1 : 0;
+            onDataChanged();
+        }
+    });
 
     // ==========================================
     // EVENT HANDLERS
