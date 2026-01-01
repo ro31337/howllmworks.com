@@ -170,6 +170,56 @@
             width: 100%;
             cursor: pointer;
             accent-color: var(--accent-color);
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        input[type="range"]::-moz-range-track {
+            background: #ddd;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        /* Weight sliders (blue) */
+        input[type="range"].weight-slider::-webkit-slider-thumb {
+            background: #667eea;
+        }
+        input[type="range"].weight-slider::-moz-range-thumb {
+            background: #667eea;
+        }
+
+        /* Input sliders (orange) */
+        input[type="range"].input-slider::-webkit-slider-thumb {
+            background: #e67e22;
+        }
+        input[type="range"].input-slider::-moz-range-thumb {
+            background: #e67e22;
         }
 
         /* Content Area */
@@ -284,10 +334,10 @@
             
             <div class="control-group" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                 <label>
-                    Input Value ($x$)
-                    <span class="value-badge" id="val-xPoint">0.0</span>
+                    <span style="color: #e67e22; font-weight: 600;">Input Value (x)</span>
+                    <span class="value-badge" style="background: #e67e22;" id="val-xPoint">0.0</span>
                 </label>
-                <input type="range" id="xPointSlider" min="-10" max="10" step="0.1" value="0">
+                <input type="range" id="xPointSlider" class="input-slider" min="-10" max="10" step="0.1" value="0">
             </div>
         </div>
         
@@ -427,20 +477,23 @@
         const container = document.getElementById('sliders-container');
         container.innerHTML = '';
 
+        const weightColor = '#667eea';
+
         config.sliders.forEach(slider => {
             const group = document.createElement('div');
             group.className = 'control-group';
-            
+
             const label = document.createElement('label');
-            label.innerHTML = `<span>${slider.label}</span> <span class="value-badge" id="val-${slider.key}">${state[slider.key].toFixed(1)}</span>`;
-            
+            label.innerHTML = `<span style="color: ${weightColor}; font-weight: 600;">${slider.label}</span> <span class="value-badge" style="background: ${weightColor};" id="val-${slider.key}">${state[slider.key].toFixed(1)}</span>`;
+
             const input = document.createElement('input');
             input.type = 'range';
+            input.className = 'weight-slider';
             input.min = slider.min;
             input.max = slider.max;
             input.step = slider.step;
             input.value = state[slider.key];
-            
+
             input.oninput = (e) => {
                 state[slider.key] = parseFloat(e.target.value);
                 document.getElementById(`val-${slider.key}`).textContent = state[slider.key].toFixed(1);
