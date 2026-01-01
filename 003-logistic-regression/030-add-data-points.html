@@ -483,7 +483,9 @@
             { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2.5, y: 0 },
             { x: 3, y: 1 }, { x: 4, y: 1 }, { x: 5, y: 1 }
         ],
-        showValues: false
+        showValues: false,
+        // Test point for demonstration
+        testPoint: { x: 3.5, y: 1 }
     };
 
     // --- Math Functions ---
@@ -572,20 +574,20 @@
         const b = state.b;
         const m = state.data.length;
         const eps = 1e-15;
+        const tp = state.testPoint;
 
         const zEl = document.getElementById('z-equation');
         const sigEl = document.getElementById('sigmoid-equation');
         const lossEl = document.getElementById('loss-equation');
         const costEl = document.getElementById('cost-equation');
 
-        if (state.showValues && m > 0) {
-            // Calculate values for first point as example
-            const p0 = state.data[0];
-            const z0 = w * p0.x + b;
-            const yHat0 = Math.max(eps, Math.min(1 - eps, sigmoid(z0)));
-            const loss0 = -(p0.y * Math.log(yHat0) + (1 - p0.y) * Math.log(1 - yHat0));
+        if (state.showValues) {
+            // Calculate values for TEST POINT
+            const zTest = w * tp.x + b;
+            const yHatTest = Math.max(eps, Math.min(1 - eps, sigmoid(zTest)));
+            const lossTest = -(tp.y * Math.log(yHatTest) + (1 - tp.y) * Math.log(1 - yHatTest));
 
-            // Calculate all losses for total
+            // Calculate all losses for total (data points only)
             let lossTerms = [];
             let totalLoss = 0;
             state.data.forEach(p => {
@@ -595,25 +597,29 @@
                 totalLoss += loss;
                 lossTerms.push(loss.toFixed(2));
             });
-            const avgLoss = totalLoss / m;
+            const avgLoss = m > 0 ? totalLoss / m : 0;
 
             // Format b sign
             const bSign = b >= 0 ? '+' : '-';
             const bAbs = Math.abs(b).toFixed(2);
+            const yLabel = tp.y === 1 ? '1' : '0';
 
-            // Step 1: z with example
-            zEl.innerHTML = `$$ z = \\underbrace{${w.toFixed(2)}}_{w} \\cdot \\underbrace{${p0.x.toFixed(1)}}_{x_1} ${bSign} \\underbrace{${bAbs}}_{b} = ${z0.toFixed(2)} $$`;
+            // Step 1: z with test point
+            zEl.innerHTML = `$$ z = \\underbrace{${w.toFixed(2)}}_{w} \\cdot \\underbrace{${tp.x.toFixed(2)}}_{x} ${bSign} \\underbrace{${bAbs}}_{b} = ${zTest.toFixed(2)} $$`;
 
-            // Step 2: sigmoid with example
-            sigEl.innerHTML = `$$ \\hat{y} = \\frac{1}{1 + e^{-${z0.toFixed(2)}}} = ${yHat0.toFixed(4)} $$`;
+            // Step 2: sigmoid
+            sigEl.innerHTML = `$$ \\hat{y} = \\frac{1}{1 + e^{-(${zTest.toFixed(2)})}} = ${yHatTest.toFixed(4)} $$`;
 
-            // Step 3: loss with example
-            const y0 = p0.y;
-            lossEl.innerHTML = `$$ L = -[${y0} \\cdot \\ln(${yHat0.toFixed(3)}) + ${1-y0} \\cdot \\ln(${(1-yHat0).toFixed(3)})] = ${loss0.toFixed(3)} $$`;
+            // Step 3: loss for test point
+            lossEl.innerHTML = `$$ L = -[${yLabel} \\cdot \\ln(${yHatTest.toFixed(3)}) + ${1-tp.y} \\cdot \\ln(${(1-yHatTest).toFixed(3)})] = ${lossTest.toFixed(3)} $$`;
 
-            // Step 4: total cost
-            const sumStr = lossTerms.join(' + ');
-            costEl.innerHTML = `$$ J = \\frac{1}{${m}} (${sumStr}) = \\boxed{${avgLoss.toFixed(4)}} $$`;
+            // Step 4: total cost (from data points)
+            if (m > 0) {
+                const sumStr = lossTerms.join(' + ');
+                costEl.innerHTML = `$$ J = \\frac{1}{${m}} (${sumStr}) = \\boxed{${avgLoss.toFixed(4)}} $$`;
+            } else {
+                costEl.innerHTML = `$$ J = \\text{(no data points)} $$`;
+            }
 
         } else {
             // Generic formulas
@@ -658,29 +664,37 @@
         // Custom Drag Logic
         let isDragging = false;
         let dragIndex = -1;
+        let isDraggingTest = false;
 
         plotDiv.addEventListener('mousedown', (e) => {
             const rect = plotDiv.getBoundingClientRect();
             const xaxis = plotDiv._fullLayout.xaxis;
             const yaxis = plotDiv._fullLayout.yaxis;
-            
-            // Mouse pos in pixels
+
             const xPx = e.clientX - rect.left;
             const yPx = e.clientY - rect.top;
-            
-            // Mouse pos in data units
             const xVal = xaxis.p2d(xPx - xaxis._offset);
             const yVal = yaxis.p2d(yPx - yaxis._offset);
-            
-            // Find nearest point
+
+            // Check test point first (priority)
+            const tp = state.testPoint;
+            const dxTest = Math.abs(tp.x - xVal);
+            const dyTest = Math.abs(tp.y - yVal);
+            if (dxTest < 0.5 && dyTest < 0.25) {
+                isDraggingTest = true;
+                plotDiv.style.cursor = 'grabbing';
+                e.preventDefault();
+                return;
+            }
+
+            // Find nearest data point
             let minDist = Infinity;
             let closest = -1;
-            
+
             state.data.forEach((p, i) => {
-                // Simple distance in data space (rough approx)
                 const dx = Math.abs(p.x - xVal);
                 const dy = Math.abs(p.y - yVal);
-                if (dx < 0.5 && dy < 0.2) { // Hitbox
+                if (dx < 0.5 && dy < 0.2) {
                     if (dx < minDist) {
                         minDist = dx;
                         closest = i;
@@ -697,23 +711,35 @@
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
+            if (!isDragging && !isDraggingTest) return;
+
             const rect = plotDiv.getBoundingClientRect();
             const xaxis = plotDiv._fullLayout.xaxis;
-            
+            const yaxis = plotDiv._fullLayout.yaxis;
+
             const xPx = e.clientX - rect.left;
+            const yPx = e.clientY - rect.top;
             let xVal = xaxis.p2d(xPx - xaxis._offset);
-            
+            let yVal = yaxis.p2d(yPx - yaxis._offset);
+
             // Clamp X
             xVal = Math.max(-1, Math.min(8, xVal));
-            state.data[dragIndex].x = xVal;
-            autoFit();
+
+            if (isDraggingTest) {
+                // Move test point (can move in Y too, snaps to 0 or 1)
+                state.testPoint.x = xVal;
+                state.testPoint.y = yVal > 0.5 ? 1 : 0;
+                updateView();
+            } else if (isDragging) {
+                state.data[dragIndex].x = xVal;
+                autoFit();
+            }
         });
 
         document.addEventListener('mouseup', () => {
-            if (isDragging) {
+            if (isDragging || isDraggingTest) {
                 isDragging = false;
+                isDraggingTest = false;
                 dragIndex = -1;
                 plotDiv.style.cursor = '';
             }
@@ -799,8 +825,29 @@
             hoverinfo: 'x'
         };
 
-        // 3. Residual lines from points to sigmoid (always visible, subtle)
+        // 3. Test Point (draggable, for formula demonstration)
+        const tp = state.testPoint;
+        const tpYHat = sigmoid(state.w * tp.x + state.b);
+        const traceTest = {
+            x: [tp.x],
+            y: [tp.y],
+            mode: 'markers',
+            marker: {
+                color: '#f97316',
+                size: 18,
+                symbol: 'diamond',
+                line: { color: 'white', width: 2 }
+            },
+            type: 'scatter',
+            name: 'Test Point',
+            hoverinfo: 'text',
+            hovertext: `Test Point (drag me!)<br>x=${tp.x.toFixed(2)}, y=${tp.y}`
+        };
+
+        // 4. Residual lines from points to sigmoid
         const shapes = [];
+
+        // Data points residuals (subtle)
         state.data.forEach(p => {
             const yHat = sigmoid(state.w * p.x + state.b);
             const color = p.y === 1 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
@@ -812,13 +859,21 @@
             });
         });
 
+        // Test point residual (more visible)
+        shapes.push({
+            type: 'line',
+            x0: tp.x, y0: tp.y,
+            x1: tp.x, y1: tpYHat,
+            line: { color: '#f97316', width: 2, dash: 'dash' }
+        });
+
         // Merge shapes into layout
         const fullLayout = Object.assign({}, plotLayout, {
             shapes: shapes,
             datarevision: Date.now()
         });
 
-        Plotly.react('plotDiv', [traceCurve, tracePass, traceFail], fullLayout, plotConfig);
+        Plotly.react('plotDiv', [traceCurve, tracePass, traceFail, traceTest], fullLayout, plotConfig);
     }
 
     // --- Sidebar Resizer ---
