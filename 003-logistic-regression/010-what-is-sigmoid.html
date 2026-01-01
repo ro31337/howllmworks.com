@@ -6,7 +6,14 @@
     <title>What is Sigmoid? - Logistic Regression Interactive | How LLM Works</title>
     <meta name="description" content="Interactive visualization of the Sigmoid function in Logistic Regression. Switch between mathematical notations (School, Stats, ML, Linear Algebra) and see how parameters shape the probability curve.">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
@@ -350,26 +357,26 @@
     const modes = {
         school: {
             label: 'School',
-            formula: '$$ z = \beta_0 + \beta_1 x $$',
-            desc: '<strong>Intuition:</strong> Simplest form. Just a line equation. $\beta_0$ shifts left/right, $\beta_1$ controls steepness.',
+            formula: '$$ z = \\beta_0 + \\beta_1 x $$',
+            desc: '<strong>Intuition:</strong> Simplest form. Just a line equation. $\\beta_0$ shifts left/right, $\\beta_1$ controls steepness.',
             sliders: [
-                { key: 'w0', label: '\(\beta_0\) (Intercept)', min: -5, max: 5, step: 0.1 },
-                { key: 'w1', label: '\(\beta_1\) (Slope)', min: -5, max: 5, step: 0.1 }
+                { key: 'w0', label: 'β₀ (Intercept)', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: 'β₁ (Slope)', min: -5, max: 5, step: 0.1 }
             ]
         },
         stats: {
             label: 'Stats',
-            formula: '$$ z = \beta_0 + \beta_1 x_1 + \dots $$',
-            desc: '<strong>Regression:</strong> In statistics, we emphasize the additive nature of effects. Adding more variables ($\beta_2 x_2$) just shifts the curve for $x_1$.',
+            formula: '$$ z = \\beta_0 + \\beta_1 x_1 + \\dots $$',
+            desc: '<strong>Regression:</strong> In statistics, we emphasize the additive nature of effects. Adding more variables ($\\beta_2 x_2$) just shifts the curve for $x_1$.',
             sliders: [
-                { key: 'w0', label: '\(\beta_0\)', min: -5, max: 5, step: 0.1 },
-                { key: 'w1', label: '\(\beta_1\) (for \(x_1\))', min: -5, max: 5, step: 0.1 },
-                { key: 'w2', label: '\(\beta_2\) (Context)', min: -5, max: 5, step: 0.1 }
+                { key: 'w0', label: 'β₀', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: 'β₁ (for x₁)', min: -5, max: 5, step: 0.1 },
+                { key: 'w2', label: 'β₂ (Context)', min: -5, max: 5, step: 0.1 }
             ]
         },
         ml: {
             label: 'ML',
-            formula: '$$ z = w \cdot x + b $$',
+            formula: '$$ z = w \\cdot x + b $$',
             desc: '<strong>Machine Learning:</strong> We use $w$ (weights) and $b$ (bias). It is the exact same math, just different variable names.',
             sliders: [
                 { key: 'w0', label: 'b (Bias)', min: -5, max: 5, step: 0.1 },
@@ -378,8 +385,8 @@
         },
         linalg: {
             label: 'LinAlg',
-            formula: '$$ z = \mathbf{w}^T\mathbf{x} + b $$',
-            desc: '<strong>Vector Form:</strong> Concise notation used in GPU computing. $\mathbf{w}^T\mathbf{x}$ is the dot product.',
+            formula: '$$ z = \\mathbf{w}^T\\mathbf{x} + b $$',
+            desc: '<strong>Vector Form:</strong> Concise notation used in GPU computing. $\\mathbf{w}^T\\mathbf{x}$ is the dot product.',
             sliders: [
                 { key: 'w0', label: 'b', min: -5, max: 5, step: 0.1 },
                 { key: 'w1', label: 'w[0]', min: -5, max: 5, step: 0.1 },
