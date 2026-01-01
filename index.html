@@ -161,6 +161,25 @@
         .badge-metrics { background: #f3e8ff; color: #7c3aed; }
         .badge-reference { background: #fce7f3; color: #be185d; }
         .badge-learningrate { background: #fef9c3; color: #854d0e; }
+        .badge-logistic { background: #ede9fe; color: #5b21b6; }
+
+        .module-header {
+            margin-top: 40px;
+            margin-bottom: 5px;
+        }
+
+        .module-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 0;
+        }
+
+        .module-subtitle {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+            margin: 5px 0 15px 0;
+        }
 
         @media (max-width: 768px) {
             .card {
@@ -177,13 +196,18 @@
     </div>
 
     <div class="header">
-        <h1 data-key="mainTitle">Linear Regression Module</h1>
-        <div class="subtitle" data-key="mainSubtitle">Interactive visualizations for understanding regression mechanics</div>
+        <h1 data-key="mainTitle">How LLM Works</h1>
+        <div class="subtitle" data-key="mainSubtitle">Interactive visualizations for understanding machine learning</div>
     </div>
 
     <div class="container">
 
-        <!-- BASICS SECTION -->
+        <!-- MODULE 1: LINEAR REGRESSION -->
+        <div class="module-header">
+            <div class="module-title" data-key="module1Title">Module 1: Linear Regression</div>
+            <div class="module-subtitle" data-key="module1Subtitle">Interactive visualizations for understanding regression mechanics</div>
+        </div>
+
         <div class="section-title" data-key="sectionBasics">Basics</div>
 
         <a href="001-linear-regression/010-linear-regression-sse-basics.html" class="card">
@@ -259,8 +283,11 @@
             </div>
         </a>
 
-        <!-- LEARNING RATE MODULE -->
-        <div class="section-title" style="margin-top: 40px;" data-key="moduleLearnRate">Module 2: Learning Rate</div>
+        <!-- MODULE 2: LEARNING RATE -->
+        <div class="module-header">
+            <div class="module-title" data-key="module2Title">Module 2: Learning Rate</div>
+            <div class="module-subtitle" data-key="module2Subtitle">Understanding the most important hyperparameter in optimization</div>
+        </div>
 
         <a href="002-learning-rate/010-learning-rate.html" class="card">
             <span class="badge badge-learningrate">Learning Rate</span>
@@ -270,13 +297,30 @@
             </div>
         </a>
 
+        <!-- MODULE 3: LOGISTIC REGRESSION -->
+        <div class="module-header">
+            <div class="module-title" data-key="module3Title">Module 3: Logistic Regression</div>
+            <div class="module-subtitle" data-key="module3Subtitle">From regression to classification with the Sigmoid function</div>
+        </div>
+
+        <a href="003-logistic-regression/010-what-is-sigmoid.html" class="card">
+            <span class="badge badge-logistic">Sigmoid</span>
+            <div class="card-title" data-key="titleLG010">Sigmoid Function Explorer</div>
+            <div class="card-desc" data-key="descLG010">
+                Interactive visualization of the Sigmoid function — the heart of logistic regression. See how β₀ and β₁ parameters shape the probability curve, and explore equivalent notations used in statistics, ML, and linear algebra.
+            </div>
+        </a>
+
     </div>
 
     <script>
         const translations = {
             en: {
-                mainTitle: "Linear Regression Module",
-                mainSubtitle: "Interactive visualizations for understanding regression mechanics",
+                mainTitle: "How LLM Works",
+                mainSubtitle: "Interactive visualizations for understanding machine learning",
+
+                module1Title: "Module 1: Linear Regression",
+                module1Subtitle: "Interactive visualizations for understanding regression mechanics",
 
                 sectionBasics: "Basics",
                 sectionPolynomial: "Polynomial Regression",
@@ -307,13 +351,22 @@
                 title500: "Useful Resources",
                 desc500: "Curated external links to deepen your understanding: intuitive explanations, Python implementations from scratch, and in-depth articles on linear regression fundamentals.",
 
-                moduleLearnRate: "Module 2: Learning Rate",
+                module2Title: "Module 2: Learning Rate",
+                module2Subtitle: "Understanding the most important hyperparameter in optimization",
                 titleLR010: "Learning Rate Explorer",
-                descLR010: "Interactive visualization of the learning rate hyperparameter. Experiment with different α values to see how step size affects gradient descent: too small leads to slow convergence, too large causes divergence."
+                descLR010: "Interactive visualization of the learning rate hyperparameter. Experiment with different α values to see how step size affects gradient descent: too small leads to slow convergence, too large causes divergence.",
+
+                module3Title: "Module 3: Logistic Regression",
+                module3Subtitle: "From regression to classification with the Sigmoid function",
+                titleLG010: "Sigmoid Function Explorer",
+                descLG010: "Interactive visualization of the Sigmoid function — the heart of logistic regression. See how β₀ and β₁ parameters shape the probability curve, and explore equivalent notations used in statistics, ML, and linear algebra."
             },
             ru: {
-                mainTitle: "Модуль линейной регрессии",
-                mainSubtitle: "Интерактивные визуализации для понимания механики регрессии",
+                mainTitle: "Как работают LLM",
+                mainSubtitle: "Интерактивные визуализации для понимания машинного обучения",
+
+                module1Title: "Модуль 1: Линейная регрессия",
+                module1Subtitle: "Интерактивные визуализации для понимания механики регрессии",
 
                 sectionBasics: "Основы",
                 sectionPolynomial: "Полиномиальная регрессия",
@@ -344,9 +397,15 @@
                 title500: "Полезные ресурсы",
                 desc500: "Подборка внешних ссылок для углубления понимания: интуитивные объяснения, реализации на Python с нуля, статьи об основах линейной регрессии.",
 
-                moduleLearnRate: "Модуль 2: Learning Rate",
+                module2Title: "Модуль 2: Learning Rate",
+                module2Subtitle: "Понимание главного гиперпараметра оптимизации",
                 titleLR010: "Исследователь Learning Rate",
-                descLR010: "Интерактивная визуализация гиперпараметра learning rate. Экспериментируйте с разными значениями α: слишком маленький шаг — медленная сходимость, слишком большой — расходимость."
+                descLR010: "Интерактивная визуализация гиперпараметра learning rate. Экспериментируйте с разными значениями α: слишком маленький шаг — медленная сходимость, слишком большой — расходимость.",
+
+                module3Title: "Модуль 3: Логистическая регрессия",
+                module3Subtitle: "От регрессии к классификации через функцию Sigmoid",
+                titleLG010: "Исследователь функции Sigmoid",
+                descLG010: "Интерактивная визуализация функции Sigmoid — сердца логистической регрессии. Смотрите, как параметры β₀ и β₁ формируют кривую вероятности, и изучайте эквивалентные записи из статистики, ML и линейной алгебры."
             }
         };
 
