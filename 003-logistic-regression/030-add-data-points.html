@@ -875,20 +875,20 @@
 
             // Annotation only when Show Values is ON
             if (state.showValues) {
-                const textColor = p.y === 1 ? '#16a34a' : '#dc2626';
+                const valueColor = p.y === 1 ? '#16a34a' : '#dc2626';
+                const labelColor = p.y === 1 ? 'rgba(22, 163, 74, 0.5)' : 'rgba(220, 38, 38, 0.5)';
                 const midY = (p.y + yHat) / 2;
-                const labelText = p.y === 0
-                    ? `1-ŷ=${(1-yHat).toFixed(2)}`
-                    : `ŷ=${yHat.toFixed(2)}`;
+                const value = p.y === 0 ? (1-yHat).toFixed(3) : yHat.toFixed(3);
+                const label = p.y === 0 ? '1-ŷ = ' : 'ŷ = ';
 
                 annotations.push({
                     x: p.x,
                     y: midY,
                     xanchor: 'left',
                     yanchor: 'middle',
-                    text: labelText,
+                    text: `<i style="color:${labelColor}">${label}</i><b style="color:${valueColor}">${value}</b>`,
                     showarrow: false,
-                    font: { size: 10, color: textColor },
+                    font: { size: 15, family: 'serif' },
                     xshift: 5
                 });
             }
@@ -905,15 +905,16 @@
         // Test point annotation only when Show Values is ON
         if (state.showValues) {
             const tpMidY = (tp.y + tpYHat) / 2;
-            const tpLabel = tp.y === 0 ? `1-ŷ=${(1-tpYHat).toFixed(2)}` : `ŷ=${tpYHat.toFixed(2)}`;
+            const tpValue = tp.y === 0 ? (1-tpYHat).toFixed(3) : tpYHat.toFixed(3);
+            const tpLabelText = tp.y === 0 ? '1-ŷ = ' : 'ŷ = ';
             annotations.push({
                 x: tp.x,
                 y: tpMidY,
                 xanchor: 'left',
                 yanchor: 'middle',
-                text: tpLabel,
+                text: `<i style="color:rgba(234, 88, 12, 0.5)">${tpLabelText}</i><b style="color:#ea580c">${tpValue}</b>`,
                 showarrow: false,
-                font: { size: 11, color: '#ea580c', weight: 'bold' },
+                font: { size: 16, family: 'serif' },
                 xshift: 5
             });
         }
