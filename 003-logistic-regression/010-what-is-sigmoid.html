@@ -332,12 +332,8 @@
                 <!-- Sliders injected by JS -->
             </div>
             
-            <div class="control-group" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                <label>
-                    <span style="color: #e67e22; font-weight: 600;">Input Value (x)</span>
-                    <span class="value-badge" style="background: #e67e22;" id="val-xPoint">0.0</span>
-                </label>
-                <input type="range" id="xPointSlider" class="input-slider" min="-10" max="10" step="0.1" value="0">
+            <div id="input-sliders-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                <!-- Input sliders injected by JS -->
             </div>
         </div>
         
@@ -402,7 +398,8 @@
         w0: 0,   // Bias / Intercept
         w1: 1,   // Weight 1 / Slope
         w2: 0.5, // Weight 2 (hidden/contextual)
-        xPoint: 0 // Current x position
+        xPoint: 0, // Current x position (x₁)
+        x2: 1.0    // Second input (x₂)
     };
 
     // --- Configuration for Modes ---
@@ -505,6 +502,50 @@
             container.appendChild(group);
         });
 
+        // Render Input Sliders
+        const inputContainer = document.getElementById('input-sliders-container');
+        inputContainer.innerHTML = '';
+
+        const inputColor = '#e67e22';
+        const hasMultipleInputs = (state.mode === 'stats' || state.mode === 'ml' || state.mode === 'linalg');
+
+        // Input sliders config based on mode
+        const inputSliders = hasMultipleInputs
+            ? [
+                { key: 'xPoint', label: 'x₁', min: -10, max: 10, step: 0.1 },
+                { key: 'x2', label: 'x₂', min: -5, max: 5, step: 0.1 }
+            ]
+            : [
+                { key: 'xPoint', label: 'x', min: -10, max: 10, step: 0.1 }
+            ];
+
+        inputSliders.forEach(slider => {
+            const group = document.createElement('div');
+            group.className = 'control-group';
+
+            const label = document.createElement('label');
+            label.innerHTML = `<span style="color: ${inputColor}; font-weight: 600;">${slider.label}</span> <span class="value-badge" style="background: ${inputColor};" id="val-${slider.key}">${state[slider.key].toFixed(1)}</span>`;
+
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.className = 'input-slider';
+            input.min = slider.min;
+            input.max = slider.max;
+            input.step = slider.step;
+            input.value = state[slider.key];
+            input.id = slider.key + 'Slider';
+
+            input.oninput = (e) => {
+                state[slider.key] = parseFloat(e.target.value);
+                document.getElementById(`val-${slider.key}`).textContent = state[slider.key].toFixed(1);
+                updatePlot();
+            };
+
+            group.appendChild(label);
+            group.appendChild(input);
+            inputContainer.appendChild(group);
+        });
+
         // MathJax
         if (window.MathJax) {
             MathJax.typesetPromise([document.querySelector('.sidebar')]);
@@ -517,9 +558,9 @@
 
     function calculateZ(x) {
         let z = state.w0 + state.w1 * x;
-        // For modes with multiple weights, add w2 effect (x2 fixed at 1.0 for visualization)
+        // For modes with multiple weights, add w2 * x2
         if (state.mode === 'stats' || state.mode === 'ml' || state.mode === 'linalg') {
-            z += state.w2 * 1.0;
+            z += state.w2 * state.x2;
         }
         return z;
     }
@@ -527,7 +568,6 @@
     function getZCalculationHTML(x, z) {
         const fmt = (n) => n < 0 ? `(${n.toFixed(1)})` : n.toFixed(1);
         const fmtPlain = (n) => n.toFixed(1);
-        const x2 = 1.0; // fixed second input for visualization
 
         // Color helpers: weights in blue, inputs in orange
         const w = (val) => `<span style="color: #667eea; font-weight: 600;">${val}</span>`;
@@ -540,15 +580,15 @@
 
             case 'stats':
                 // z = β₀ + β₁·x₁ + β₂·x₂ = 0 + 1·2 + 0.5·1 = 2.5
-                return `z = β₀ + β₁·x₁ + β₂·x₂ = ${w(fmtPlain(state.w0))} + ${w(fmtPlain(state.w1))}·${inp(fmt(x))} + ${w(fmtPlain(state.w2))}·${inp(fmtPlain(x2))} = <strong>${z.toFixed(2)}</strong>`;
+                return `z = β₀ + β₁·x₁ + β₂·x₂ = ${w(fmtPlain(state.w0))} + ${w(fmtPlain(state.w1))}·${inp(fmt(x))} + ${w(fmtPlain(state.w2))}·${inp(fmt(state.x2))} = <strong>${z.toFixed(2)}</strong>`;
 
             case 'ml':
                 // z = w₁·x₁ + w₂·x₂ + b = 1·2 + 0.5·1 + 0 = 2.5
-                return `z = w₁·x₁ + w₂·x₂ + b = ${w(fmtPlain(state.w1))}·${inp(fmt(x))} + ${w(fmtPlain(state.w2))}·${inp(fmtPlain(x2))} + ${w(fmtPlain(state.w0))} = <strong>${z.toFixed(2)}</strong>`;
+                return `z = w₁·x₁ + w₂·x₂ + b = ${w(fmtPlain(state.w1))}·${inp(fmt(x))} + ${w(fmtPlain(state.w2))}·${inp(fmt(state.x2))} + ${w(fmtPlain(state.w0))} = <strong>${z.toFixed(2)}</strong>`;
 
             case 'linalg':
                 // z = w·x + b = [1,0.5]·[2,1]ᵀ + 0 = 2.5
-                return `z = <b>w</b>·<b>x</b> + b = ${w('[' + fmtPlain(state.w1) + ', ' + fmtPlain(state.w2) + ']')}·${inp('[' + fmt(x) + ', ' + fmtPlain(x2) + ']')}ᵀ + ${w(fmtPlain(state.w0))} = <strong>${z.toFixed(2)}</strong>`;
+                return `z = <b>w</b>·<b>x</b> + b = ${w('[' + fmtPlain(state.w1) + ', ' + fmtPlain(state.w2) + ']')}·${inp('[' + fmt(x) + ', ' + fmt(state.x2) + ']')}ᵀ + ${w(fmtPlain(state.w0))} = <strong>${z.toFixed(2)}</strong>`;
 
             default:
                 return `z = <strong>${z.toFixed(2)}</strong>`;
@@ -695,8 +735,10 @@
 
             // Update state and UI
             state.xPoint = xData;
-            document.getElementById('xPointSlider').value = xData;
-            document.getElementById('val-xPoint').textContent = xData.toFixed(1);
+            const slider = document.getElementById('xPointSlider');
+            if (slider) slider.value = xData;
+            const valDisplay = document.getElementById('val-xPoint');
+            if (valDisplay) valDisplay.textContent = xData.toFixed(1);
             updatePlot();
         });
 
@@ -745,8 +787,10 @@
             xData = Math.max(-10, Math.min(10, xData));
 
             state.xPoint = xData;
-            document.getElementById('xPointSlider').value = xData;
-            document.getElementById('val-xPoint').textContent = xData.toFixed(1);
+            const slider = document.getElementById('xPointSlider');
+            if (slider) slider.value = xData;
+            const valDisplay = document.getElementById('val-xPoint');
+            if (valDisplay) valDisplay.textContent = xData.toFixed(1);
             updatePlot();
         }, { passive: false });
 
@@ -760,8 +804,10 @@
             const xData = data.points[0].x;
             if (typeof xData === 'number') {
                 state.xPoint = Math.max(-10, Math.min(10, xData));
-                document.getElementById('xPointSlider').value = state.xPoint;
-                document.getElementById('val-xPoint').textContent = state.xPoint.toFixed(1);
+                const slider = document.getElementById('xPointSlider');
+                if (slider) slider.value = state.xPoint;
+                const valDisplay = document.getElementById('val-xPoint');
+                if (valDisplay) valDisplay.textContent = state.xPoint.toFixed(1);
                 updatePlot();
             }
         });
@@ -783,13 +829,6 @@
     // --- Init ---
     window.addEventListener('load', () => {
         setMode('school');
-
-        // Setup X-Point Slider Listener (static one)
-        document.getElementById('xPointSlider').addEventListener('input', (e) => {
-            state.xPoint = parseFloat(e.target.value);
-            document.getElementById('val-xPoint').textContent = state.xPoint.toFixed(1);
-            updatePlot();
-        });
 
         // Setup drag handlers after initial plot is rendered
         setTimeout(setupDragHandlers, 100);
