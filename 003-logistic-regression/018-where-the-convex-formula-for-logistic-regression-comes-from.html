@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Where the Log-Loss Formula Comes From | How LLM Works</title>
+    <meta name="description" content="Interactive visualization explaining the derivation of the Log-Loss (Binary Cross-Entropy) formula. Understand why we use -log(y) and -log(1-y) for classification error.">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --secondary-text: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: var(--card-bg);
+            padding: 25px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+            color: var(--text-color);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin: 0 0 15px 0;
+            line-height: 1.4;
+        }
+
+        /* Controls */
+        .control-panel {
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .toggle-container {
+            display: flex;
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            background: transparent;
+            color: var(--secondary-text);
+        }
+
+        .toggle-btn.active-y1 {
+            background: var(--success-color);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .toggle-btn.active-y0 {
+            background: var(--danger-color);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--accent-color);
+        }
+
+        .value-badge {
+            background: var(--text-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+
+        /* Explanation Box in Sidebar */
+        .explanation-box {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .explanation-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            background-color: #f0f2f5;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+        }
+
+        .formula-card {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            text-align: center;
+        }
+
+        .viz-container {
+            flex: 1;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Math highlighting classes */
+        .math-highlight {
+            transition: color 0.3s;
+        }
+        .highlight-active { font-weight: bold; }
+        .highlight-dim { opacity: 0.3; }
+
+        .y1-color { color: var(--success-color); }
+        .y0-color { color: var(--danger-color); }
+
+        /* Language Switch */
+        .lang-switch-container {
+            display: flex;
+            gap: 4px;
+        }
+
+        .lang-btn {
+            background: #e9ecef;
+            border: none;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 4px;
+            color: var(--secondary-text);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: #ddd;
+        }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; overflow: auto; height: auto; }
+            .sidebar { width: auto; height: auto; }
+            .content { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+            <h1 data-key="title">Deriving Log-Loss</h1>
+            <div class="lang-switch-container">
+                <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+                <button class="lang-btn" onclick="setLanguage('ru')">RU</button>
+            </div>
+        </div>
+        <div class="subtitle" data-key="subtitle">Why we use logarithms for classification error</div>
+    </div>
+
+    <div class="control-panel">
+        <div>
+            <label style="font-size: 0.9rem; font-weight: 600; color: #555; margin-bottom: 8px; display: block;" data-key="labelTrueOutcome">True Outcome (y)</label>
+            <div class="toggle-container">
+                <button class="toggle-btn active-y1" id="btnY1" onclick="setTrueY(1)" data-key="btnY1">y = 1 (Passed)</button>
+                <button class="toggle-btn" id="btnY0" onclick="setTrueY(0)" data-key="btnY0">y = 0 (Failed)</button>
+            </div>
+        </div>
+
+        <div class="slider-group">
+            <label>
+                <span data-key="labelPredictedProb">Predicted Prob (ŷ)</span>
+                <span class="value-badge" id="probBadge">0.80</span>
+            </label>
+            <input type="range" id="probSlider" min="0.01" max="0.99" step="0.01" value="0.80">
+        </div>
+    </div>
+
+    <div class="explanation-box" id="sidebarExplainer">
+        <!-- Content injected via JS -->
+    </div>
+</div>
+
+<div class="content">
+    <!-- Formula Section -->
+    <div class="card formula-card">
+        <h3 style="margin:0; color: var(--secondary-text); font-size: 1rem;" data-key="formulaTitle">The Combined Log-Loss Formula</h3>
+        <div style="font-size: 1.3rem;" id="mainFormula">
+            <!-- MathJax will render here -->
+            $$ \text{Loss} = -[ y \cdot \log(\hat{y}) + (1-y) \cdot \log(1-\hat{y}) ] $$ 
+        </div>
+        <div id="calculationDisplay" style="font-family: monospace; font-size: 1.1rem; background: #f8f9fa; padding: 10px 20px; border-radius: 8px;">
+            <!-- Calculation steps injected here -->
+        </div>
+    </div>
+
+    <!-- Visualization -->
+    <div class="card viz-container">
+        <div id="lossPlot" style="width: 100%; height: 100%;"></div>
+    </div>
+</div>
+
+<script>
+    // Translations
+    const translations = {
+        en: {
+            title: "Deriving Log-Loss",
+            subtitle: "Why we use logarithms for classification error",
+            labelTrueOutcome: "True Outcome (y)",
+            btnY1: "y = 1 (Passed)",
+            btnY0: "y = 0 (Failed)",
+            labelPredictedProb: "Predicted Prob (ŷ)",
+            formulaTitle: "The Combined Log-Loss Formula",
+            // Explanation texts
+            case1Title: "Case 1: Actual Outcome is 1 (Pass)",
+            case2Title: "Case 2: Actual Outcome is 0 (Fail)",
+            excellentY1: (prob, loss) => `<strong>Excellent!</strong> The model predicts a high probability (${prob}%) of passing. Since the student actually passed, the penalty (Loss) is very small (${loss}).`,
+            severeY1: (prob) => `<strong>Severe Penalty!</strong> The model is confident the student failed (predicting only ${prob}% pass chance), but they actually passed! Log-Loss punishes this "confident wrongness" massively.`,
+            unsureY1: (prob) => `The model is unsure (predicting ${prob}%). The penalty is moderate. We want to push \\(\\hat{y}\\) closer to 1.`,
+            excellentY0: (prob) => `<strong>Excellent!</strong> The model predicts a low probability (${prob}%) of passing (meaning high chance of failing). Since the student failed, the penalty is tiny.`,
+            severeY0: (prob) => `<strong>Severe Penalty!</strong> The model is confident the student passed (${prob}%), but they actually failed! The formula \\(-\\ln(1-\\hat{y})\\) explodes when \\(\\hat{y}\\) is near 1.`,
+            unsureY0: `The model is unsure. The penalty is moderate. We want to push \\(\\hat{y}\\) closer to 0.`,
+            note: `<em>Note: The "Combined Formula" uses math trickery (multiplying by y or 1-y) to automatically switch between these two logic cases.</em>`,
+            // Plot labels
+            plotXAxis: "Predicted Probability (ŷ)",
+            plotYAxis: "Loss / Penalty",
+            plotLegendY1: "If y=1: -ln(ŷ)",
+            plotLegendY0: "If y=0: -ln(1-ŷ)",
+            plotLegendCurrent: "Current Prediction"
+        },
+        ru: {
+            title: "Вывод Log-Loss",
+            subtitle: "Почему мы используем логарифмы для ошибки классификации",
+            labelTrueOutcome: "Истинный исход (y)",
+            btnY1: "y = 1 (Сдал)",
+            btnY0: "y = 0 (Не сдал)",
+            labelPredictedProb: "Предсказ. вероятн. (ŷ)",
+            formulaTitle: "Объединённая формула Log-Loss",
+            // Explanation texts
+            case1Title: "Случай 1: Истинный исход = 1 (Сдал)",
+            case2Title: "Случай 2: Истинный исход = 0 (Не сдал)",
+            excellentY1: (prob, loss) => `<strong>Отлично!</strong> Модель предсказывает высокую вероятность (${prob}%) сдачи. Поскольку студент действительно сдал, штраф (Loss) очень маленький (${loss}).`,
+            severeY1: (prob) => `<strong>Жёсткий штраф!</strong> Модель уверена, что студент не сдал (предсказывает только ${prob}% шанс сдачи), но он сдал! Log-Loss жёстко наказывает такую "уверенную ошибку".`,
+            unsureY1: (prob) => `Модель не уверена (предсказывает ${prob}%). Штраф умеренный. Мы хотим приблизить \\(\\hat{y}\\) к 1.`,
+            excellentY0: (prob) => `<strong>Отлично!</strong> Модель предсказывает низкую вероятность (${prob}%) сдачи (то есть высокий шанс провала). Поскольку студент не сдал, штраф минимальный.`,
+            severeY0: (prob) => `<strong>Жёсткий штраф!</strong> Модель уверена, что студент сдал (${prob}%), но он не сдал! Формула \\(-\\ln(1-\\hat{y})\\) взрывается, когда \\(\\hat{y}\\) близко к 1.`,
+            unsureY0: `Модель не уверена. Штраф умеренный. Мы хотим приблизить \\(\\hat{y}\\) к 0.`,
+            note: `<em>Примечание: "Объединённая формула" использует математический трюк (умножение на y или 1-y) для автоматического переключения между этими двумя логическими случаями.</em>`,
+            // Plot labels
+            plotXAxis: "Предсказанная вероятность (ŷ)",
+            plotYAxis: "Потери / Штраф",
+            plotLegendY1: "Если y=1: -ln(ŷ)",
+            plotLegendY0: "Если y=0: -ln(1-ŷ)",
+            plotLegendCurrent: "Текущее предсказание"
+        }
+    };
+
+    // State
+    const state = {
+        y: 1,           // True outcome: 1 or 0
+        yHat: 0.80,     // Predicted probability
+        loss: 0,
+        lang: 'en'      // Current language
+    };
+
+    // DOM Elements
+    const probSlider = document.getElementById('probSlider');
+    const probBadge = document.getElementById('probBadge');
+    const btnY1 = document.getElementById('btnY1');
+    const btnY0 = document.getElementById('btnY0');
+    const sidebarExplainer = document.getElementById('sidebarExplainer');
+    const calculationDisplay = document.getElementById('calculationDisplay');
+
+    // Init
+    function init() {
+        probSlider.addEventListener('input', (e) => {
+            state.yHat = parseFloat(e.target.value);
+            update();
+        });
+
+        setTrueY(1); // Start with y=1
+        window.addEventListener('resize', () => {
+             if (window.Plotly) Plotly.Plots.resize('lossPlot');
+        });
+    }
+
+    function setLanguage(lang) {
+        state.lang = lang;
+        const t = translations[lang];
+
+        // Update active button state
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.innerText.toLowerCase() === lang) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Update static text elements
+        document.querySelectorAll('[data-key]').forEach(el => {
+            const key = el.getAttribute('data-key');
+            if (t[key]) {
+                el.innerHTML = t[key];
+            }
+        });
+
+        // Re-render dynamic content
+        update();
+    }
+
+    function setTrueY(val) {
+        state.y = val;
+        
+        // Update Toggle UI
+        if (val === 1) {
+            btnY1.classList.add('active-y1');
+            btnY0.classList.remove('active-y0');
+            // Bias slider towards good prediction for better UX on switch
+            if (state.yHat < 0.5) {
+                state.yHat = 0.8; 
+                probSlider.value = 0.8;
+            }
+        } else {
+            btnY1.classList.remove('active-y1');
+            btnY0.classList.add('active-y0');
+            // Bias slider towards good prediction for better UX on switch
+            if (state.yHat > 0.5) {
+                state.yHat = 0.2;
+                probSlider.value = 0.2;
+            }
+        }
+        
+        update();
+    }
+
+    function calculateLoss(y, yHat) {
+        // Clamp to avoid Infinity
+        const eps = 1e-15;
+        yHat = Math.max(eps, Math.min(1 - eps, yHat));
+        
+        if (y === 1) return -Math.log(yHat);
+        return -Math.log(1 - yHat);
+    }
+
+    function update() {
+        // Update State
+        state.loss = calculateLoss(state.y, state.yHat);
+        
+        // Update UI
+        probBadge.textContent = state.yHat.toFixed(2);
+        
+        updateFormula();
+        updateExplanation();
+        updatePlot();
+    }
+
+    function updateFormula() {
+        const y = state.y;
+        const yHat = state.yHat.toFixed(2);
+        const loss = state.loss.toFixed(2);
+        const logVal = Math.log(state.yHat).toFixed(2);
+        const logOneMinusVal = Math.log(1 - state.yHat).toFixed(2);
+        const oneMinusYHat = (1 - state.yHat).toFixed(2);
+
+        let html = "";
+
+        if (y === 1) {
+            html = `
+                <div>
+                    $$ \\text{Loss} = -[ \\mathbf{1} \\cdot \\ln(${yHat}) + (1-1) \\cdot \\ln(1-${yHat}) ] $$
+                </div>
+                <div style="margin-top: 10px; color: #555;">
+                    $$ = -[ \\ln(${yHat}) + 0 ] = -(${logVal}) = \\mathbf{${loss}} $$
+                </div>
+            `;
+        } else {
+            html = `
+                <div>
+                    $$ \\text{Loss} = -[ \\mathbf{0} \\cdot \\ln(${yHat}) + (1-0) \\cdot \\ln(1-${yHat}) ] $$
+                </div>
+                <div style="margin-top: 10px; color: #555;">
+                    $$ = -[ 0 + \\ln(${oneMinusYHat}) ] = -(${logOneMinusVal}) = \\mathbf{${loss}} $$
+                </div>
+            `;
+        }
+
+        calculationDisplay.innerHTML = html;
+        
+        // Safely call MathJax
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            MathJax.typesetPromise([calculationDisplay]).catch(err => console.log('MathJax error:', err));
+        }
+    }
+
+    function updateExplanation() {
+        const t = translations[state.lang];
+        let title, text, colorClass;
+
+        const loss = state.loss;
+        const isLowLoss = loss < 0.3;
+        const isHighLoss = loss > 1.5;
+        const prob = (state.yHat * 100).toFixed(0);
+
+        if (state.y === 1) {
+            title = t.case1Title;
+            colorClass = "y1-color";
+
+            if (isLowLoss) {
+                text = t.excellentY1(prob, loss.toFixed(2));
+            } else if (isHighLoss) {
+                text = t.severeY1(prob);
+            } else {
+                text = t.unsureY1(prob);
+            }
+        } else {
+            title = t.case2Title;
+            colorClass = "y0-color";
+
+            if (isLowLoss) {
+                text = t.excellentY0(prob);
+            } else if (isHighLoss) {
+                text = t.severeY0(prob);
+            } else {
+                text = t.unsureY0;
+            }
+        }
+
+        sidebarExplainer.innerHTML = `
+            <h3 class="${colorClass}">${title}</h3>
+            <p>${text}</p>
+            <p style="font-size: 0.85rem; color: #999; margin-top: 15px;">
+                ${t.note}
+            </p>
+        `;
+        
+        // Re-render LaTeX in sidebar explanation if needed
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            MathJax.typesetPromise([sidebarExplainer]).catch(err => {});
+        }
+    }
+
+    function updatePlot() {
+        if (!window.Plotly) return;
+
+        const t = translations[state.lang];
+        const xValues = [];
+        const y1Values = []; // Loss when y=1: -log(x)
+        const y0Values = []; // Loss when y=0: -log(1-x)
+
+        for (let x = 0.01; x < 0.995; x += 0.01) {
+            xValues.push(x);
+            y1Values.push(-Math.log(x));
+            y0Values.push(-Math.log(1-x));
+        }
+
+        // Colors
+        const colY1 = '#27ae60'; // Green
+        const colY0 = '#e74c3c'; // Red
+        const colInactive = '#e0e0e0';
+
+        const activeTraceColor = state.y === 1 ? colY1 : colY0;
+
+        // Trace 1: y=1 case
+        const trace1 = {
+            x: xValues,
+            y: y1Values,
+            mode: 'lines',
+            name: t.plotLegendY1,
+            line: {
+                color: state.y === 1 ? colY1 : colInactive,
+                width: state.y === 1 ? 4 : 2
+            }
+        };
+
+        // Trace 2: y=0 case
+        const trace2 = {
+            x: xValues,
+            y: y0Values,
+            mode: 'lines',
+            name: t.plotLegendY0,
+            line: {
+                color: state.y === 0 ? colY0 : colInactive,
+                width: state.y === 0 ? 4 : 2
+            }
+        };
+
+        // Current Point Marker
+        const pointTrace = {
+            x: [state.yHat],
+            y: [state.loss],
+            mode: 'markers',
+            name: t.plotLegendCurrent,
+            marker: {
+                color: activeTraceColor,
+                size: 14,
+                line: { color: 'white', width: 2 }
+            }
+        };
+
+        const layout = {
+            title: { text: '', font: { size: 14 } },
+            xaxis: {
+                title: t.plotXAxis,
+                range: [0, 1],
+                fixedrange: true
+            },
+            yaxis: {
+                title: t.plotYAxis,
+                range: [0, 5],
+                fixedrange: true
+            },
+            showlegend: true,
+            legend: { x: 0.5, y: 1.1, xanchor: 'center', orientation: 'h' },
+            margin: { l: 50, r: 20, t: 40, b: 50 },
+            hovermode: 'closest',
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            shapes: [
+                // Dashed line to axis
+                {
+                    type: 'line',
+                    x0: state.yHat, y0: 0,
+                    x1: state.yHat, y1: state.loss,
+                    line: { color: activeTraceColor, width: 1, dash: 'dot' }
+                },
+                {
+                    type: 'line',
+                    x0: 0, y0: state.loss,
+                    x1: state.yHat, y1: state.loss,
+                    line: { color: activeTraceColor, width: 1, dash: 'dot' }
+                }
+            ]
+        };
+
+        Plotly.react('lossPlot', [trace1, trace2, pointTrace], layout, { 
+            responsive: true, 
+            displayModeBar: false 
+        });
+    }
+
+    // Start
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+</script>
+</body>
+</html>
