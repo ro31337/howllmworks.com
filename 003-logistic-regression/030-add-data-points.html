@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Data Points - Logistic Regression | How LLM Works</title>
+    <meta name="description" content="Interactive playground for Logistic Regression. Add, move, and remove data points to see how the Sigmoid curve and Cost function react in real-time.">
+    <meta name="keywords" content="logistic regression, data points, interactive, machine learning, sigmoid, cost function, log loss, education, visualization">
+    <meta name="author" content="How LLM Works">
+    <link rel="canonical" href="https://howllmworks.com/003-logistic-regression/030-add-data-points.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://howllmworks.com/003-logistic-regression/030-add-data-points.html">
+    <meta property="og:title" content="Interactive Data Points - Logistic Regression">
+    <meta property="og:description" content="Add, move, and remove data points to see how the Sigmoid curve reacts.">
+    <meta property="og:site_name" content="How LLM Works">
+
+    <!-- Plotly & MathJax -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --weight-color: #8b5cf6; /* Violet for weights */
+            --bias-color: #ec4899;   /* Pink for bias */
+            --pass-color: #22c55e;   /* Green */
+            --fail-color: #ef4444;   /* Red */
+            --secondary-text: #64748b;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 360px;
+            background: var(--card-bg);
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            flex-shrink: 0;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--text-color);
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: var(--secondary-text);
+            line-height: 1.4;
+        }
+
+        .sidebar-content {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Controls */
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--secondary-text);
+            font-weight: 600;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .btn:active { transform: translateY(1px); }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+            width: 100%;
+        }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        .btn-pass { border-left: 4px solid var(--pass-color); }
+        .btn-fail { border-left: 4px solid var(--fail-color); }
+
+        /* Sliders */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .badge {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Formula Box */
+        .formula-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .z-eq {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .notation-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+            margin-top: 8px;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 8px;
+        }
+        
+        .notation-btn {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 0;
+            font-size: inherit;
+            text-decoration: underline;
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f1f5f9;
+            padding: 24px;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        /* Top Bar: Cost Formula */
+        .top-bar {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 16px 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            min-height: 80px;
+        }
+
+        .formula-display {
+            flex: 1;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-color);
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider-toggle { background-color: var(--accent-color); }
+        input:checked + .slider-toggle:before { transform: translateX(18px); }
+
+        /* Visualization Card */
+        .viz-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+        }
+        
+        #plotDiv {
+            flex: 1;
+            width: 100%;
+        }
+
+        .helper-text {
+            text-align: center;
+            color: var(--secondary-text);
+            font-size: 0.85rem;
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .helper-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .icon-mouse {
+            width: 16px;
+            height: 16px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            position: relative;
+        }
+        .icon-mouse::before {
+            content: '';
+            position: absolute;
+            top: 2px; left: 50%; transform: translateX(-50%);
+            width: 2px; height: 4px; background: #94a3b8;
+        }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; overflow: auto; height: auto; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #e2e8f0; }
+            .top-bar { flex-direction: column; align-items: stretch; text-align: center; }
+            .viz-card { min-height: 400px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h1>Logistic Regression</h1>
+        <div class="subtitle">Data & Curve Fitting</div>
+    </div>
+
+    <div class="sidebar-content">
+        <!-- Data Controls -->
+        <div class="control-section">
+            <div class="section-title">Data Points</div>
+            <div class="btn-group">
+                <button class="btn btn-pass" onclick="addDataPoint(1)">
+                    <span>+ Pass (y=1)</span>
+                </button>
+                <button class="btn btn-fail" onclick="addDataPoint(0)">
+                    <span>+ Fail (y=0)</span>
+                </button>
+            </div>
+            <button class="btn" onclick="clearData()">
+                <span style="color: #ef4444;">&times;</span> Clear All Points
+            </button>
+        </div>
+
+        <!-- Model Controls -->
+        <div class="control-section">
+            <div class="section-title">Model Parameters</div>
+            
+            <button class="btn btn-primary" onclick="autoFit()" id="fitBtn">
+                <span>✨ Auto-Fit (Gradient Descent)</span>
+            </button>
+
+            <div class="slider-container">
+                <div class="slider-header">
+                    <label style="color: var(--weight-color);">Weight (w)</label>
+                    <span id="val-w" class="badge" style="background: var(--weight-color);">1.0</span>
+                </div>
+                <input type="range" id="slider-w" min="-5" max="5" step="0.1" value="1">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-header">
+                    <label style="color: var(--bias-color);">Bias (b)</label>
+                    <span id="val-b" class="badge" style="background: var(--bias-color);">0.0</span>
+                </div>
+                <input type="range" id="slider-b" min="-10" max="10" step="0.1" value="0">
+            </div>
+        </div>
+
+        <!-- Equation -->
+        <div class="formula-box">
+            <div class="section-title" style="margin-bottom: 10px;">Linear Term (z)</div>
+            <div id="z-equation" class="z-eq">
+                $$ z = w \cdot x + b $$
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="main-content">
+    <!-- Top Bar: Loss Formula -->
+    <div class="top-bar">
+        <div class="formula-display" id="loss-formula">
+            <!-- MathJax Rendered -->
+            $$ J = -\frac{1}{m} \sum [y \ln(\sigma(z)) + (1-y) \ln(1-\sigma(z))] $$
+        </div>
+        <div class="switch-container">
+            <span>Show Values</span>
+            <label class="switch">
+                <input type="checkbox" id="valuesToggle" onchange="updateView()">
+                <span class="slider-toggle"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Plot -->
+    <div class="viz-card">
+        <div id="plotDiv"></div>
+        <div class="helper-text">
+            <div class="helper-item"><span class="icon-mouse"></span> Drag points to move</div>
+            <div class="helper-item">Double-click point to delete</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- State ---
+    const state = {
+        w: 1.0,
+        b: 0.0,
+        // Initial data: Studied hours vs Pass/Fail
+        data: [
+            { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2.5, y: 0 },
+            { x: 3, y: 1 }, { x: 4, y: 1 }, { x: 5, y: 1 }
+        ],
+        showValues: false
+    };
+
+    // --- Math Functions ---
+    function sigmoid(z) {
+        return 1 / (1 + Math.exp(-z));
+    }
+
+    function calculateLoss(w, b) {
+        if (state.data.length === 0) return 0;
+        let sumLoss = 0;
+        const eps = 1e-15;
+        for (let p of state.data) {
+            const z = w * p.x + b;
+            const yHat = Math.max(eps, Math.min(1 - eps, sigmoid(z)));
+            sumLoss += -(p.y * Math.log(yHat) + (1 - p.y) * Math.log(1 - yHat));
+        }
+        return sumLoss / state.data.length;
+    }
+
+    // --- Data Management ---
+    function addDataPoint(y) {
+        // Find a nice x spot: average of existing or 0
+        let newX = 0;
+        if (state.data.length > 0) {
+            // Place it slightly offset from the last point
+            newX = state.data[state.data.length - 1].x + 0.5;
+            if (newX > 8) newX = 0; // Wrap around if too far
+        } else {
+            newX = 2.5;
+        }
+        state.data.push({ x: newX, y: y });
+        updateView();
+    }
+
+    function clearData() {
+        state.data = [];
+        updateView();
+    }
+
+    // --- Gradient Descent (Auto-Fit) ---
+    function autoFit() {
+        if (state.data.length === 0) return;
+
+        let w = state.w;
+        let b = state.b;
+        const lr = 0.5;
+        const epochs = 500;
+
+        for (let i = 0; i < epochs; i++) {
+            let dw = 0, db = 0;
+            for (let p of state.data) {
+                const z = w * p.x + b;
+                const yHat = sigmoid(z);
+                const err = yHat - p.y;
+                dw += err * p.x;
+                db += err;
+            }
+            w -= (lr * dw) / state.data.length;
+            b -= (lr * db) / state.data.length;
+        }
+
+        state.w = w;
+        state.b = b;
+        updateControls();
+        updateView();
+    }
+
+    // --- UI Updates ---
+    function updateControls() {
+        document.getElementById('slider-w').value = state.w;
+        document.getElementById('slider-b').value = state.b;
+        document.getElementById('val-w').textContent = state.w.toFixed(2);
+        document.getElementById('val-b').textContent = state.b.toFixed(2);
+    }
+
+    function updateView() {
+        updatePlot();
+        updateFormulas();
+    }
+
+    function updateFormulas() {
+        // Update Z equation with colored values using spans
+        const wStr = state.w.toFixed(2);
+        const bAbs = Math.abs(state.b).toFixed(2);
+        const bSign = state.b >= 0 ? '+' : '-';
+
+        const zEl = document.getElementById('z-equation');
+        zEl.innerHTML = `$$ z = \\underbrace{${wStr}}_{w} \\cdot x \\; ${bSign} \\; \\underbrace{${bAbs}}_{b} $$`;
+        if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([zEl]).catch(()=>{});
+
+        // Update Loss Formula
+        const lossEl = document.getElementById('loss-formula');
+        const lossVal = calculateLoss(state.w, state.b).toFixed(4);
+
+        if (state.showValues) {
+            lossEl.innerHTML = `$$ J = \\frac{1}{${state.data.length}} \\sum \\text{Loss}_i = \\boxed{${lossVal}} $$`;
+        } else {
+            lossEl.innerHTML = `$$ J = -\\frac{1}{m} \\sum_{i=1}^{m} [y^{(i)} \\ln(\\hat{y}^{(i)}) + (1-y^{(i)}) \\ln(1-\\hat{y}^{(i)})] $$`;
+        }
+        if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([lossEl]).catch(()=>{});
+    }
+
+    // --- Plotly ---
+    const plotLayout = {
+        margin: { t: 20, r: 20, b: 40, l: 50 },
+        xaxis: { title: 'Input (x)', range: [-1, 8], gridcolor: '#f1f5f9', fixedrange: true },
+        yaxis: { title: 'Probability (y)', range: [-0.1, 1.1], gridcolor: '#f1f5f9', fixedrange: true },
+        showlegend: false,
+        hovermode: 'closest',
+        dragmode: false,
+        plot_bgcolor: 'white',
+        paper_bgcolor: 'white'
+    };
+
+    const plotConfig = {
+        responsive: true,
+        displayModeBar: false,
+        scrollZoom: false,
+        doubleClick: false,
+        staticPlot: false
+    };
+
+    function initPlot() {
+        Plotly.newPlot('plotDiv', [], plotLayout, plotConfig);
+        
+        // Setup Interactions
+        const plotDiv = document.getElementById('plotDiv');
+        
+        // Custom Drag Logic
+        let isDragging = false;
+        let dragIndex = -1;
+
+        plotDiv.addEventListener('mousedown', (e) => {
+            const rect = plotDiv.getBoundingClientRect();
+            const xaxis = plotDiv._fullLayout.xaxis;
+            const yaxis = plotDiv._fullLayout.yaxis;
+            
+            // Mouse pos in pixels
+            const xPx = e.clientX - rect.left;
+            const yPx = e.clientY - rect.top;
+            
+            // Mouse pos in data units
+            const xVal = xaxis.p2d(xPx - xaxis._offset);
+            const yVal = yaxis.p2d(yPx - yaxis._offset);
+            
+            // Find nearest point
+            let minDist = Infinity;
+            let closest = -1;
+            
+            state.data.forEach((p, i) => {
+                // Simple distance in data space (rough approx)
+                const dx = Math.abs(p.x - xVal);
+                const dy = Math.abs(p.y - yVal);
+                if (dx < 0.5 && dy < 0.2) { // Hitbox
+                    if (dx < minDist) {
+                        minDist = dx;
+                        closest = i;
+                    }
+                }
+            });
+
+            if (closest !== -1) {
+                isDragging = true;
+                dragIndex = closest;
+                plotDiv.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const rect = plotDiv.getBoundingClientRect();
+            const xaxis = plotDiv._fullLayout.xaxis;
+            
+            const xPx = e.clientX - rect.left;
+            let xVal = xaxis.p2d(xPx - xaxis._offset);
+            
+            // Clamp X
+            xVal = Math.max(-2, Math.min(10, xVal));
+            
+            state.data[dragIndex].x = xVal;
+            
+            // Real-time update
+            requestAnimationFrame(() => {
+                // If we want "live auto-fit", uncomment:
+                // autoFit(); 
+                updateView();
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                dragIndex = -1;
+                plotDiv.style.cursor = '';
+            }
+        });
+        
+        // Double Click to Delete
+        plotDiv.addEventListener('dblclick', (e) => {
+             const rect = plotDiv.getBoundingClientRect();
+            const xaxis = plotDiv._fullLayout.xaxis;
+            const yaxis = plotDiv._fullLayout.yaxis;
+            
+            const xPx = e.clientX - rect.left;
+            const yPx = e.clientY - rect.top;
+            const xVal = xaxis.p2d(xPx - xaxis._offset);
+            const yVal = yaxis.p2d(yPx - yaxis._offset);
+
+            let hit = -1;
+            state.data.forEach((p, i) => {
+                const dx = Math.abs(p.x - xVal);
+                const dy = Math.abs(p.y - yVal);
+                if (dx < 0.5 && dy < 0.2) hit = i;
+            });
+
+            if (hit !== -1) {
+                state.data.splice(hit, 1);
+                updateView();
+            }
+        });
+    }
+
+    function updatePlot() {
+        const xRange = [-1, 8];
+
+        // 1. Sigmoid Curve
+        const curveX = [];
+        const curveY = [];
+        for (let x = xRange[0]; x <= xRange[1]; x += 0.1) {
+            curveX.push(x);
+            curveY.push(sigmoid(state.w * x + state.b));
+        }
+
+        const traceCurve = {
+            x: curveX,
+            y: curveY,
+            mode: 'lines',
+            line: { color: '#3b82f6', width: 3 },
+            name: 'Sigmoid'
+        };
+
+        // 2. Data Points
+        const passPoints = state.data.filter(p => p.y === 1);
+        const failPoints = state.data.filter(p => p.y === 0);
+
+        const tracePass = {
+            x: passPoints.map(p => p.x),
+            y: passPoints.map(p => p.y),
+            mode: 'markers',
+            marker: { color: '#22c55e', size: 14, line: {color: 'white', width: 2} },
+            type: 'scatter',
+            name: 'Pass (1)',
+            hoverinfo: 'x'
+        };
+
+        const traceFail = {
+            x: failPoints.map(p => p.x),
+            y: failPoints.map(p => p.y),
+            mode: 'markers',
+            marker: { color: '#ef4444', size: 14, line: {color: 'white', width: 2} },
+            type: 'scatter',
+            name: 'Fail (0)',
+            hoverinfo: 'x'
+        };
+
+        // 3. Loss Lines (Residuals) - only if "Values" is ON
+        const shapes = [];
+        if (state.showValues) {
+            state.data.forEach(p => {
+                const yHat = sigmoid(state.w * p.x + state.b);
+                const color = p.y === 1 ? '#22c55e' : '#ef4444';
+                shapes.push({
+                    type: 'line',
+                    x0: p.x, y0: p.y,
+                    x1: p.x, y1: yHat,
+                    line: { color: color, width: 2, dash: 'dot' },
+                    opacity: 0.5
+                });
+            });
+        }
+
+        // Merge shapes into layout
+        const fullLayout = Object.assign({}, plotLayout, {
+            shapes: shapes,
+            datarevision: Date.now()
+        });
+
+        Plotly.react('plotDiv', [traceCurve, tracePass, traceFail], fullLayout, plotConfig);
+    }
+
+    // --- Events ---
+    document.getElementById('slider-w').addEventListener('input', (e) => {
+        state.w = parseFloat(e.target.value);
+        document.getElementById('val-w').textContent = state.w.toFixed(2);
+        updateView();
+    });
+
+    document.getElementById('slider-b').addEventListener('input', (e) => {
+        state.b = parseFloat(e.target.value);
+        document.getElementById('val-b').textContent = state.b.toFixed(2);
+        updateView();
+    });
+
+    document.getElementById('valuesToggle').addEventListener('change', (e) => {
+        state.showValues = e.target.checked;
+        updateView();
+    });
+
+    // --- Init ---
+    window.addEventListener('load', () => {
+        initPlot();
+        updateControls();
+        updateView();
+    });
+
+    window.addEventListener('resize', () => {
+        Plotly.Plots.resize('plotDiv');
+    });
+
+</script>
+</body>
+</html>
