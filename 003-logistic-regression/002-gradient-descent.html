@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gradient Descent on Log-Loss Surface - Logistic Regression | How LLM Works</title>
+    <meta name="description" content="Gradient descent visualization on the Log-Loss (Binary Cross-Entropy) surface for Logistic Regression. See how the convex loss landscape enables reliable optimization.">
+    <meta name="keywords" content="gradient descent, log-loss, binary cross-entropy, logistic regression, sigmoid, optimization, machine learning, AI education">
+    <meta name="author" content="How LLM Works">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://howllmworks.com/003-logistic-regression/002-gradient-descent.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://howllmworks.com/003-logistic-regression/002-gradient-descent.html">
+    <meta property="og:title" content="Gradient Descent on Log-Loss Surface - Logistic Regression">
+    <meta property="og:description" content="Interactive visualization of gradient descent on the Log-Loss surface. See how Binary Cross-Entropy creates a convex optimization landscape.">
+    <meta property="og:site_name" content="How LLM Works">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Gradient Descent on Log-Loss Surface - Logistic Regression">
+    <meta name="twitter:description" content="Interactive visualization of gradient descent on the Log-Loss surface for classification.">
+
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --accent-color: #8b5cf6; /* Purple for logistic regression */
+            --accent-hover: #7c3aed;
+            --secondary-text: #6c757d;
+            --border-radius: 16px;
+            --shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+            --font-main: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            padding: 20px 40px;
+            background: var(--card-bg);
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .header-content p {
+            margin: 5px 0 0 0;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+        /* Main Layout */
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Controls Section */
+        .controls-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-secondary { background: #e9ecef; color: var(--text-color); }
+        .btn-secondary:hover { background: #dee2e6; }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 200px;
+        }
+
+        .slider-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--secondary-text);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        .equation-display {
+            margin-left: auto;
+            font-family: monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            background: #f5f3ff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd6fe;
+            min-width: 280px;
+            text-align: center;
+        }
+
+        /* Visualization Grid */
+        .viz-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .viz-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .viz-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .viz-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 4px;
+            background: rgba(255,255,255,0.9);
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            backdrop-filter: blur(4px);
+        }
+
+        .viz-content {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* 3D Canvas */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: move;
+        }
+
+        /* Overlay Info */
+        .overlay-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            font-family: monospace;
+            font-size: 0.85rem;
+            pointer-events: none;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+            min-width: 180px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .info-row:last-child { margin-bottom: 0; }
+        .info-label { color: var(--secondary-text); }
+        .info-value { font-weight: 700; color: var(--text-color); }
+
+        /* Legend for data points */
+        .legend {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-item:last-child { margin-bottom: 0; }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.pass { background: #22c55e; }
+        .legend-dot.fail { background: #ef4444; }
+
+        @media (max-width: 900px) {
+            .viz-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            .controls-card { flex-direction: column; align-items: stretch; }
+            .equation-display { margin-left: 0; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Logistic Regression: Gradient Descent</h1>
+        <p>Visualizing optimization on the Log-Loss (Binary Cross-Entropy) Surface</p>
+    </div>
+</header>
+
+<div class="main-container">
+    <!-- Controls -->
+    <div class="controls-card">
+        <div class="control-group">
+            <button class="btn btn-primary" id="startBtn">
+                <span id="playIcon">&#9658;</span> Start Descent
+            </button>
+            <button class="btn btn-secondary" id="resetBtn">
+                &#8635; Reset
+            </button>
+        </div>
+
+        <div class="slider-group">
+            <label>Learning Rate (&#945;): <span id="lrValue">0.5</span></label>
+            <input type="range" id="lrSlider" min="0.1" max="2.0" step="0.1" value="0.5">
+        </div>
+
+        <div class="equation-display" id="equationDisplay">
+            $$ \hat{y} = \sigma(0.00x + 0.00) $$
+        </div>
+    </div>
+
+    <!-- Visualizations -->
+    <div class="viz-grid">
+        <!-- 2D Data Plot with Sigmoid -->
+        <div class="viz-card">
+            <div class="viz-header">
+                <div class="viz-title">Model Space (2D)</div>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><span class="legend-dot pass"></span> Passed (y=1)</div>
+                <div class="legend-item"><span class="legend-dot fail"></span> Failed (y=0)</div>
+            </div>
+            <div id="plot2d" class="viz-content"></div>
+            <div class="overlay-info">
+                <div class="info-row"><span class="info-label">Epoch</span><span class="info-value" id="epochDisplay">0</span></div>
+                <div class="info-row"><span class="info-label">Slope (m)</span><span class="info-value" id="slopeDisplay">0.00</span></div>
+                <div class="info-row"><span class="info-label">Intercept (b)</span><span class="info-value" id="interceptDisplay">0.00</span></div>
+            </div>
+        </div>
+
+        <!-- 3D Log-Loss Surface -->
+        <div class="viz-card">
+            <div class="viz-header">
+                <div class="viz-title">Log-Loss Surface (BCE)</div>
+            </div>
+            <div class="viz-content" id="canvasContainer">
+                <canvas id="canvas3d"></canvas>
+            </div>
+            <div class="overlay-info">
+                <div class="info-row"><span class="info-label">Current Loss</span><span class="info-value" id="lossDisplay">0.00</span></div>
+                <div class="info-row"><span class="info-label">Gradient Norm</span><span class="info-value" id="gradDisplay">0.00</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURATION & STATE
+    // ==========================================
+    const config = {
+        bgColor: '#ffffff',
+        gridColor: 'rgba(0,0,0,0.1)',
+        surfaceOpacity: 0.9,
+        colors: {
+            low: [139, 92, 246],    // Purple (accent)
+            mid: [59, 130, 246],    // Blue
+            high: [253, 186, 116],  // Orange/Yellow
+            path: '#ffffff',
+            point: '#ef4444'
+        },
+        lerpFactor: 0.08,
+        stepThreshold: 0.001
+    };
+
+    // Student exam data: hours studied vs pass/fail
+    // Inspired by the tmp.txt example
+    const data = {
+        x: [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8],
+        y: [0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1]  // 0 = fail, 1 = pass
+    };
+
+    const M = data.x.length;
+
+    let state = {
+        targetM: 0,
+        targetB: 0,
+        visualM: 0,
+        visualB: 0,
+        lr: 0.5,
+        history: [],
+        isRunning: false,
+        epoch: 0,
+        isConverged: false
+    };
+
+    let camera = {
+        rotX: -0.5,
+        rotY: -0.6,
+        zoom: 2.2,
+        autoRotate: true,
+        lastMouse: { x: 0, y: 0 },
+        isDragging: false
+    };
+
+    let gridGeometry = {
+        points: [],
+        triangles: [],
+        minVal: Infinity,
+        maxVal: -Infinity
+    };
+
+    // Parameter ranges for visualization
+    const range = {
+        m: { min: -1, max: 3 },
+        b: { min: -15, max: 5 }
+    };
+
+    // ==========================================
+    // MATH & OPTIMIZATION
+    // ==========================================
+
+    // Sigmoid function
+    function sigmoid(z) {
+        // Clip to avoid overflow
+        z = Math.max(-500, Math.min(500, z));
+        return 1 / (1 + Math.exp(-z));
+    }
+
+    // Log-Loss (Binary Cross-Entropy) for entire dataset
+    function calculateLogLoss(m, b) {
+        let loss = 0;
+        const epsilon = 1e-15; // To avoid log(0)
+
+        for (let i = 0; i < M; i++) {
+            const z = m * data.x[i] + b;
+            const yHat = sigmoid(z);
+            // Clip predictions to avoid log(0)
+            const yHatClipped = Math.max(epsilon, Math.min(1 - epsilon, yHat));
+
+            // Log-Loss: -[y*log(yHat) + (1-y)*log(1-yHat)]
+            const yi = data.y[i];
+            loss += -(yi * Math.log(yHatClipped) + (1 - yi) * Math.log(1 - yHatClipped));
+        }
+
+        return loss / M; // Average loss
+    }
+
+    // Gradient of Log-Loss
+    function calculateGradient(m, b) {
+        let dm = 0;
+        let db = 0;
+
+        for (let i = 0; i < M; i++) {
+            const z = m * data.x[i] + b;
+            const yHat = sigmoid(z);
+            const error = yHat - data.y[i]; // (y_hat - y)
+
+            dm += error * data.x[i];
+            db += error;
+        }
+
+        return { dm: dm / M, db: db / M };
+    }
+
+    function planNextStep() {
+        if (state.isConverged) return;
+
+        const grads = calculateGradient(state.targetM, state.targetB);
+        const gradNorm = Math.sqrt(grads.dm**2 + grads.db**2);
+
+        if (gradNorm < 0.001) {
+            state.isConverged = true;
+            toggleSimulation();
+            return;
+        }
+
+        // Record history
+        state.history.push({
+            m: state.targetM,
+            b: state.targetB,
+            loss: calculateLogLoss(state.targetM, state.targetB)
+        });
+
+        // Update target
+        state.targetM = state.targetM - state.lr * grads.dm;
+        state.targetB = state.targetB - state.lr * grads.db;
+        state.epoch++;
+    }
+
+    // ==========================================
+    // 3D ENGINE
+    // ==========================================
+    const canvas = document.getElementById('canvas3d');
+    const ctx = canvas.getContext('2d');
+
+    function initGrid() {
+        const steps = 50;
+        const pts = [];
+
+        const mMin = range.m.min, mMax = range.m.max;
+        const bMin = range.b.min, bMax = range.b.max;
+
+        for (let r = 0; r <= steps; r++) {
+            const b = bMin + (r / steps) * (bMax - bMin);
+            for (let c = 0; c <= steps; c++) {
+                const m = mMin + (c / steps) * (mMax - mMin);
+                const val = calculateLogLoss(m, b);
+                pts.push({ m, b, val, r, c });
+                if (val < gridGeometry.minVal) gridGeometry.minVal = val;
+                if (val > gridGeometry.maxVal) gridGeometry.maxVal = val;
+            }
+        }
+
+        // Compute RAW coordinates
+        pts.forEach(p => {
+            const scale = 0.35;
+            p.rx = ((p.m - mMin) / (mMax - mMin) * 10 - 5) * scale;
+            p.rz = ((p.b - bMin) / (bMax - bMin) * 10 - 5) * scale;
+            // Scale the loss for visualization (log-loss is typically 0-1 range)
+            p.ry = (Math.min(p.val * 3, 7) - 2) * scale;
+
+            // Color based on normalized value
+            p.t = (p.val - gridGeometry.minVal) / (gridGeometry.maxVal - gridGeometry.minVal);
+        });
+
+        const tris = [];
+        for (let r = 0; r < steps; r++) {
+            for (let c = 0; c < steps; c++) {
+                const i0 = r * (steps + 1) + c;
+                const i1 = i0 + 1;
+                const i2 = (r + 1) * (steps + 1) + c;
+                const i3 = i2 + 1;
+                tris.push([i0, i1, i2]);
+                tris.push([i1, i3, i2]);
+            }
+        }
+
+        gridGeometry.points = pts;
+        gridGeometry.triangles = tris;
+    }
+
+    function project(x, y, z, width, height) {
+        const rx = x * Math.cos(camera.rotY) - z * Math.sin(camera.rotY);
+        const rz = x * Math.sin(camera.rotY) + z * Math.cos(camera.rotY);
+        const ry = y * Math.cos(camera.rotX) - rz * Math.sin(camera.rotX);
+        const rz2 = y * Math.sin(camera.rotX) + rz * Math.cos(camera.rotX);
+        const dist = 4.5;
+        const currentZoom = camera.zoom * 0.45;
+        const scale = Math.min(width, height) * 0.9 * currentZoom;
+        const f = scale / (rz2 + dist);
+        return { x: width/2 + rx * f, y: height/2 - ry * f, z: rz2 };
+    }
+
+    function getColor(t) {
+        t = Math.max(0, Math.min(1, t));
+        let cStart, cEnd, localT;
+        if (t < 0.5) {
+            cStart = config.colors.low;
+            cEnd = config.colors.mid;
+            localT = t * 2;
+        } else {
+            cStart = config.colors.mid;
+            cEnd = config.colors.high;
+            localT = (t - 0.5) * 2;
+        }
+        const r = Math.round(cStart[0] + (cEnd[0] - cStart[0]) * localT);
+        const g = Math.round(cStart[1] + (cEnd[1] - cStart[1]) * localT);
+        const b = Math.round(cStart[2] + (cEnd[2] - cStart[2]) * localT);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function toRawCoords(m, b, loss) {
+        const mMin = range.m.min, mMax = range.m.max;
+        const bMin = range.b.min, bMax = range.b.max;
+        const scale = 0.35;
+
+        const rx = ((m - mMin) / (mMax - mMin) * 10 - 5) * scale;
+        const rz = ((b - bMin) / (bMax - bMin) * 10 - 5) * scale;
+        const ry = (Math.min(loss * 3, 7) - 2) * scale;
+
+        return { rx, ry, rz };
+    }
+
+    function render3D() {
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        // 1. Grid surface
+        const projPoints = gridGeometry.points.map(p => {
+            const proj = project(p.rx, p.ry, p.rz, width, height);
+            return { ...p, px: proj.x, py: proj.y, pz: proj.z };
+        });
+
+        const renderList = gridGeometry.triangles.map(tri => {
+            const p0 = projPoints[tri[0]];
+            const p1 = projPoints[tri[1]];
+            const p2 = projPoints[tri[2]];
+            return { p0, p1, p2, z: (p0.pz + p1.pz + p2.pz) / 3, t: (p0.t + p1.t + p2.t) / 3 };
+        }).sort((a, b) => b.z - a.z);
+
+        renderList.forEach(tri => {
+            ctx.beginPath();
+            ctx.moveTo(tri.p0.px, tri.p0.py);
+            ctx.lineTo(tri.p1.px, tri.p1.py);
+            ctx.lineTo(tri.p2.px, tri.p2.py);
+            ctx.closePath();
+            ctx.fillStyle = getColor(tri.t);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.08)";
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        });
+
+        // 2. Completed Path
+        if (state.history.length > 0) {
+            ctx.beginPath();
+            const pathPoints = state.history.map(h => {
+                const raw = toRawCoords(h.m, h.b, h.loss);
+                return project(raw.rx, raw.ry, raw.rz, width, height);
+            });
+
+            if (pathPoints.length > 1) {
+                ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+                for (let i = 1; i < pathPoints.length; i++) {
+                    ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+                }
+            }
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // 3. Current Visual Head
+        const vm = state.visualM;
+        const vb = state.visualB;
+        const vLoss = calculateLogLoss(vm, vb);
+
+        const vRaw = toRawCoords(vm, vb, vLoss);
+        const head = project(vRaw.rx, vRaw.ry, vRaw.rz, width, height);
+
+        // Draw line from last history point to visual head
+        if (state.history.length > 0) {
+            const lastH = state.history[state.history.length - 1];
+            const lastRaw = toRawCoords(lastH.m, lastH.b, lastH.loss);
+            const lastProj = project(lastRaw.rx, lastRaw.ry, lastRaw.rz, width, height);
+
+            ctx.beginPath();
+            ctx.moveTo(lastProj.x, lastProj.y);
+            ctx.lineTo(head.x, head.y);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Draw Shadow
+        ctx.beginPath();
+        ctx.arc(head.x, head.y + 10, 4, 0, Math.PI*2);
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fill();
+
+        // Draw Ball
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 6, 0, Math.PI*2);
+        ctx.fillStyle = "#ef4444";
+        ctx.fill();
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    function animate() {
+        if (camera.autoRotate && !camera.isDragging) {
+            camera.rotY += 0.0005;
+        }
+
+        if (state.isRunning && !state.isConverged) {
+            const dm = state.targetM - state.visualM;
+            const db = state.targetB - state.visualB;
+            const dist = Math.sqrt(dm*dm + db*db);
+
+            if (dist < config.stepThreshold) {
+                state.visualM = state.targetM;
+                state.visualB = state.targetB;
+                planNextStep();
+                updateUIValues();
+            } else {
+                state.visualM += dm * config.lerpFactor;
+                state.visualB += db * config.lerpFactor;
+                update2DCurve();
+            }
+        }
+
+        render3D();
+        requestAnimationFrame(animate);
+    }
+
+    // ==========================================
+    // 2D PLOTLY
+    // ==========================================
+    function init2D() {
+        const layout = {
+            margin: { t: 20, r: 20, b: 50, l: 50 },
+            xaxis: {
+                title: 'Hours Studied (x)',
+                range: [0, 9],
+                fixedrange: true,
+                gridcolor: '#f0f0f0'
+            },
+            yaxis: {
+                title: 'Probability / Outcome (y)',
+                range: [-0.1, 1.1],
+                fixedrange: true,
+                gridcolor: '#f0f0f0'
+            },
+            showlegend: false,
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white',
+            height: document.getElementById('plot2d').clientHeight
+        };
+
+        // Separate passed and failed students
+        const passedX = [], passedY = [];
+        const failedX = [], failedY = [];
+
+        for (let i = 0; i < M; i++) {
+            if (data.y[i] === 1) {
+                passedX.push(data.x[i]);
+                passedY.push(data.y[i]);
+            } else {
+                failedX.push(data.x[i]);
+                failedY.push(data.y[i]);
+            }
+        }
+
+        const tracePass = {
+            x: passedX,
+            y: passedY,
+            mode: 'markers',
+            marker: { color: '#22c55e', size: 12, symbol: 'circle' },
+            type: 'scatter',
+            name: 'Passed'
+        };
+
+        const traceFail = {
+            x: failedX,
+            y: failedY,
+            mode: 'markers',
+            marker: { color: '#ef4444', size: 12, symbol: 'circle' },
+            type: 'scatter',
+            name: 'Failed'
+        };
+
+        // Generate sigmoid curve points
+        const curveX = [];
+        const curveY = [];
+        for (let x = 0; x <= 9; x += 0.1) {
+            curveX.push(x);
+            const z = state.visualM * x + state.visualB;
+            curveY.push(sigmoid(z));
+        }
+
+        const traceCurve = {
+            x: curveX,
+            y: curveY,
+            mode: 'lines',
+            line: { color: '#8b5cf6', width: 3 },
+            type: 'scatter',
+            name: 'Sigmoid'
+        };
+
+        // Decision boundary line at y=0.5
+        const traceBoundary = {
+            x: [0, 9],
+            y: [0.5, 0.5],
+            mode: 'lines',
+            line: { color: '#94a3b8', width: 1, dash: 'dash' },
+            type: 'scatter',
+            name: 'Decision Boundary'
+        };
+
+        Plotly.newPlot('plot2d', [traceBoundary, traceCurve, traceFail, tracePass], layout, { responsive: true, displayModeBar: false });
+    }
+
+    function update2DCurve() {
+        const curveX = [];
+        const curveY = [];
+        for (let x = 0; x <= 9; x += 0.1) {
+            curveX.push(x);
+            const z = state.visualM * x + state.visualB;
+            curveY.push(sigmoid(z));
+        }
+
+        Plotly.restyle('plot2d', {
+            x: [curveX],
+            y: [curveY]
+        }, [1]); // Index 1 is the sigmoid curve trace
+    }
+
+    function updateUIValues() {
+        const loss = calculateLogLoss(state.targetM, state.targetB);
+        const grads = calculateGradient(state.targetM, state.targetB);
+        const gradNorm = Math.sqrt(grads.dm**2 + grads.db**2);
+
+        document.getElementById('epochDisplay').textContent = state.epoch;
+        document.getElementById('slopeDisplay').textContent = state.targetM.toFixed(3);
+        document.getElementById('interceptDisplay').textContent = state.targetB.toFixed(3);
+        document.getElementById('lossDisplay').textContent = loss.toFixed(4);
+        document.getElementById('gradDisplay').textContent = gradNorm.toFixed(4);
+
+        const sign = state.targetB >= 0 ? '+' : '-';
+        const el = document.getElementById('equationDisplay');
+        el.innerHTML = `$$ \\hat{y} = \\sigma(${state.targetM.toFixed(2)}x ${sign} ${Math.abs(state.targetB).toFixed(2)}) $$`;
+        MathJax.typesetPromise([el]);
+    }
+
+    // ==========================================
+    // SETUP & EVENTS
+    // ==========================================
+    function toggleSimulation() {
+        state.isRunning = !state.isRunning;
+        const btn = document.getElementById('startBtn');
+
+        if (state.isRunning) {
+            btn.innerHTML = `<span id="playIcon">&#10074;&#10074;</span> Pause Descent`;
+            btn.classList.add('active');
+
+            if (state.epoch === 0 && state.history.length === 0) {
+                planNextStep();
+            }
+        } else {
+            btn.innerHTML = `<span id="playIcon">&#9658;</span> Resume Descent`;
+            btn.classList.remove('active');
+        }
+    }
+
+    function resetSimulation() {
+        state.isRunning = false;
+        state.isConverged = false;
+
+        state.targetM = 0;
+        state.targetB = 0;
+        state.visualM = 0;
+        state.visualB = 0;
+        state.history = [];
+        state.epoch = 0;
+
+        const loss = calculateLogLoss(0, 0);
+        document.getElementById('startBtn').innerHTML = `<span id="playIcon">&#9658;</span> Start Descent`;
+        document.getElementById('epochDisplay').textContent = "0";
+        document.getElementById('lossDisplay').textContent = loss.toFixed(4);
+        document.getElementById('slopeDisplay').textContent = "0.00";
+        document.getElementById('interceptDisplay').textContent = "0.00";
+        document.getElementById('gradDisplay').textContent = "0.00";
+
+        const el = document.getElementById('equationDisplay');
+        el.innerHTML = `$$ \\hat{y} = \\sigma(0.00x + 0.00) $$`;
+        MathJax.typesetPromise([el]);
+
+        update2DCurve();
+    }
+
+    window.onload = function() {
+        initGrid();
+
+        const container = document.getElementById('canvasContainer');
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+
+        init2D();
+        resetSimulation();
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            Plotly.Plots.resize('plot2d');
+        });
+
+        document.getElementById('startBtn').addEventListener('click', toggleSimulation);
+        document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+
+        document.getElementById('lrSlider').addEventListener('input', (e) => {
+            state.lr = parseFloat(e.target.value);
+            document.getElementById('lrValue').textContent = state.lr.toFixed(1);
+        });
+
+        // 3D Interactions
+        canvas.addEventListener('mousedown', e => {
+            camera.isDragging = true;
+            camera.lastMouse = { x: e.clientX, y: e.clientY };
+            camera.autoRotate = false;
+        });
+
+        window.addEventListener('mouseup', () => {
+            camera.isDragging = false;
+            camera.autoRotate = true;
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (!camera.isDragging) return;
+            const dx = e.clientX - camera.lastMouse.x;
+            const dy = e.clientY - camera.lastMouse.y;
+            camera.rotY += dx * 0.01;
+            camera.rotX += dy * 0.01;
+            camera.rotX = Math.max(-1.5, Math.min(1.5, camera.rotX));
+            camera.lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            camera.zoom -= e.deltaY * 0.001;
+            camera.zoom = Math.max(0.5, Math.min(8.0, camera.zoom));
+        }, { passive: false });
+    };
+</script>
+</body>
+</html>
