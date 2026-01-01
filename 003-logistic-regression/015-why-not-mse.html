@@ -308,8 +308,8 @@
 
 <header>
     <div class="header-content">
-        <h1>Why Not MSE for Logistic Regression?</h1>
-        <p>Comparing MSE (Non-Convex) vs Log-Loss (Convex) Loss Surfaces</p>
+        <h1>Why Not SSE/MSE for Logistic Regression?</h1>
+        <p>Comparing SSE (Non-Convex, Vanishing Gradients) vs Log-Loss (Convex)</p>
     </div>
 </header>
 
@@ -326,29 +326,34 @@
         </div>
 
         <div class="slider-group">
-            <label>Learning Rate: <span id="lrValue">0.5</span></label>
-            <input type="range" id="lrSlider" min="0.1" max="2.0" step="0.1" value="0.5">
+            <label>Learning Rate: <span id="lrValue">1.0</span></label>
+            <input type="range" id="lrSlider" min="0.5" max="1.5" step="0.1" value="1">
         </div>
 
         <div class="slider-group">
-            <label>Starting Point (m): <span id="startMValue">-0.5</span></label>
-            <input type="range" id="startMSlider" min="-1" max="1" step="0.1" value="-0.5">
+            <label>Start m: <span id="startMValue">-0.8</span></label>
+            <input type="range" id="startMSlider" min="-0.8" max="0.8" step="0.1" value="-0.8">
+        </div>
+
+        <div class="slider-group">
+            <label>Start b: <span id="startBValue">-2</span></label>
+            <input type="range" id="startBSlider" min="-4" max="1" step="0.5" value="-2">
         </div>
 
         <div class="info-box warning" id="statusBox">
-            MSE can get stuck in local minima!
+            Press Start to begin gradient descent
         </div>
     </div>
 
     <!-- Visualizations -->
     <div class="viz-grid">
-        <!-- MSE Surface (Bad) -->
+        <!-- SSE Surface (Bad) -->
         <div class="viz-card bad">
             <div class="viz-header">
-                <div class="viz-title bad">MSE + Sigmoid</div>
-                <div class="viz-subtitle">Non-Convex: Multiple Local Minima</div>
+                <div class="viz-title bad">SSE + Sigmoid</div>
+                <div class="viz-subtitle">Non-Convex: Two Local Minima</div>
                 <div class="formula-row">
-                    $$ J = \frac{1}{n}\sum(y - \sigma(mx+b))^2 $$
+                    $$ J = \sum(y - \sigma(mx+b))^2 $$
                 </div>
             </div>
             <div class="viz-content" id="mseContainer">
@@ -360,7 +365,7 @@
                 <div class="info-row"><span class="info-label">m</span><span class="info-value" id="mseM">0.00</span></div>
             </div>
             <div class="minima-marker bad">
-                <strong>Local Minima:</strong> Multiple valleys
+                <strong>Two Valleys:</strong> Start left → left, start right → right
             </div>
         </div>
 
@@ -370,7 +375,7 @@
                 <div class="viz-title good">Log-Loss + Sigmoid</div>
                 <div class="viz-subtitle">Convex: Single Global Minimum</div>
                 <div class="formula-row">
-                    $$ J = -\frac{1}{n}\sum[y\log\hat{y} + (1-y)\log(1-\hat{y})] $$
+                    $$ J = -\sum[y\log\hat{y} + (1-y)\log(1-\hat{y})] $$
                 </div>
             </div>
             <div class="viz-content" id="logLossContainer">
@@ -382,7 +387,7 @@
                 <div class="info-row"><span class="info-label">m</span><span class="info-value" id="logLossM">0.00</span></div>
             </div>
             <div class="minima-marker good">
-                <strong>Global Minimum:</strong> Single valley
+                <strong>Convex:</strong> Smooth bowl, reliable gradients
             </div>
         </div>
     </div>
@@ -409,43 +414,47 @@
         stepThreshold: 0.002
     };
 
-    // Binary classification data (simplified for 2D visualization)
-    // We fix b and only vary m to show the 2D loss curve
+    // Mirrored outliers create TWO VALLEYS in SSE surface!
+    // Symmetric outliers at ends = two equally good but different solutions
     const data = {
-        x: [1, 2, 3, 4, 5, 6, 7, 8],
-        y: [0, 0, 0, 0, 1, 1, 1, 1]
+        x: [-5, -1, 1, 5],
+        y: [1, 0, 0, 1]
     };
     const M = data.x.length;
-    const FIXED_B = -4.5; // Fixed intercept
 
-    // State for both visualizations
+    // State for both visualizations - now with both m and b
     let mseState = {
-        targetM: -0.5,
-        visualM: -0.5,
+        targetM: -0.8,
+        targetB: -2,
+        visualM: -0.8,
+        visualB: -2,
         history: [],
         epoch: 0,
         isConverged: false
     };
 
     let logLossState = {
-        targetM: -0.5,
-        visualM: -0.5,
+        targetM: -0.8,
+        targetB: -2,
+        visualM: -0.8,
+        visualB: -2,
         history: [],
         epoch: 0,
         isConverged: false
     };
 
     let globalState = {
-        lr: 0.5,
-        startM: -0.5,
+        lr: 1,
+        startM: -0.8,
+        startB: -2,
         isRunning: false
     };
 
     // Camera for both canvases (synchronized)
     let camera = {
-        rotX: -0.4,
-        rotY: -0.5,
-        zoom: 2.0,
+        rotX: -0.6,
+        rotY: -0.7,
+        zoom: 1.8,
         autoRotate: true,
         isDragging: false,
         lastMouse: { x: 0, y: 0 }
@@ -455,8 +464,8 @@
     let mseSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
     let logLossSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
 
-    const mRange = { min: -1.5, max: 3.5 };
-    const bRange = { min: -10, max: 2 };
+    const mRange = { min: -1.5, max: 1.5 };
+    const bRange = { min: -6, max: 2 };
 
     // ==========================================
     // MATH FUNCTIONS
@@ -466,30 +475,32 @@
         return 1 / (1 + Math.exp(-z));
     }
 
-    // MSE with Sigmoid
-    function calculateMSE(m, b) {
+    // SSE with Sigmoid (Sum of Squared Errors - no averaging)
+    function calculateSSE(m, b) {
         let error = 0;
         for (let i = 0; i < M; i++) {
             const z = m * data.x[i] + b;
             const yHat = sigmoid(z);
             error += Math.pow(data.y[i] - yHat, 2);
         }
-        return error / M;
+        return error; // No division by M
     }
 
-    // MSE Gradient
-    function calculateMSEGradient(m, b) {
-        let dm = 0;
+    // SSE Gradient - returns both dm and db
+    function calculateSSEGradient(m, b) {
+        let dm = 0, db = 0;
         for (let i = 0; i < M; i++) {
             const z = m * data.x[i] + b;
             const yHat = sigmoid(z);
             const sigmoidDeriv = yHat * (1 - yHat);
-            dm += -2 * (data.y[i] - yHat) * sigmoidDeriv * data.x[i];
+            const common = -2 * (data.y[i] - yHat) * sigmoidDeriv;
+            dm += common * data.x[i];
+            db += common;
         }
-        return dm / M;
+        return { dm, db };
     }
 
-    // Log-Loss (Binary Cross-Entropy)
+    // Log-Loss (Binary Cross-Entropy) - Sum version (no 1/n)
     function calculateLogLoss(m, b) {
         let loss = 0;
         const epsilon = 1e-15;
@@ -501,33 +512,37 @@
         return loss / M;
     }
 
-    // Log-Loss Gradient
+    // Log-Loss Gradient - returns both dm and db
     function calculateLogLossGradient(m, b) {
-        let dm = 0;
+        let dm = 0, db = 0;
         for (let i = 0; i < M; i++) {
             const z = m * data.x[i] + b;
             const yHat = sigmoid(z);
-            dm += (yHat - data.y[i]) * data.x[i];
+            const error = yHat - data.y[i];
+            dm += error * data.x[i];
+            db += error;
         }
-        return dm / M;
+        return { dm, db };
     }
 
     // ==========================================
     // SURFACE GENERATION
     // ==========================================
     function initSurfaces() {
-        const mSteps = 60;
-        const bSteps = 60;
+        const mSteps = 100;
+        const bSteps = 100;
 
-        // Generate MSE surface
+        // Generate SSE surface with sqrt-scale to reveal bumps
         for (let bi = 0; bi <= bSteps; bi++) {
             const b = bRange.min + (bi / bSteps) * (bRange.max - bRange.min);
             for (let mi = 0; mi <= mSteps; mi++) {
                 const m = mRange.min + (mi / mSteps) * (mRange.max - mRange.min);
-                const val = calculateMSE(m, b);
-                mseSurface.points.push({ m, b, val, mi, bi });
-                if (val < mseSurface.minVal) mseSurface.minVal = val;
-                if (val > mseSurface.maxVal) mseSurface.maxVal = val;
+                const val = calculateSSE(m, b);
+                // Use sqrt to compress high values but preserve shape better than log
+                const sqrtVal = Math.sqrt(val);
+                mseSurface.points.push({ m, b, val, sqrtVal, mi, bi });
+                if (sqrtVal < mseSurface.minVal) mseSurface.minVal = sqrtVal;
+                if (sqrtVal > mseSurface.maxVal) mseSurface.maxVal = sqrtVal;
             }
         }
 
@@ -544,19 +559,27 @@
         }
 
         // Compute 3D coordinates
-        const scale = 0.3;
+        const scale = 0.35;
+
+        // For SSE: use sqrt-scaled values
+        const mseRange = mseSurface.maxVal - mseSurface.minVal;
         mseSurface.points.forEach(p => {
             p.rx = ((p.m - mRange.min) / (mRange.max - mRange.min) * 10 - 5) * scale;
             p.rz = ((p.b - bRange.min) / (bRange.max - bRange.min) * 10 - 5) * scale;
-            p.ry = (Math.min(p.val * 8, 6) - 2) * scale;
-            p.t = (p.val - mseSurface.minVal) / (mseSurface.maxVal - mseSurface.minVal);
+            // Use sqrt-scaled value for height
+            const normalizedVal = (p.sqrtVal - mseSurface.minVal) / mseRange;
+            p.ry = (normalizedVal * 8 - 2.5) * scale;  // Taller to show shape
+            p.t = normalizedVal;
         });
 
+        // For Log-Loss: linear scaling (already smooth)
+        const logRange = logLossSurface.maxVal - logLossSurface.minVal;
         logLossSurface.points.forEach(p => {
             p.rx = ((p.m - mRange.min) / (mRange.max - mRange.min) * 10 - 5) * scale;
             p.rz = ((p.b - bRange.min) / (bRange.max - bRange.min) * 10 - 5) * scale;
-            p.ry = (Math.min(p.val * 2, 6) - 2) * scale;
-            p.t = (p.val - logLossSurface.minVal) / (logLossSurface.maxVal - logLossSurface.minVal);
+            const normalizedVal = (p.val - logLossSurface.minVal) / logRange;
+            p.ry = (normalizedVal * 6 - 2.5) * scale;
+            p.t = normalizedVal;
         });
 
         // Generate triangles (shared structure)
@@ -608,12 +631,28 @@
         return `rgb(${r},${g},${b})`;
     }
 
-    function toRawCoords(m, b, loss, surface) {
-        const scale = 0.3;
+    function toRawCoords(m, b, loss, surfaceType) {
+        const scale = 0.35;
         const rx = ((m - mRange.min) / (mRange.max - mRange.min) * 10 - 5) * scale;
         const rz = ((b - bRange.min) / (bRange.max - bRange.min) * 10 - 5) * scale;
-        const lossScale = surface === 'mse' ? 8 : 2;
-        const ry = (Math.min(loss * lossScale, 6) - 2) * scale;
+
+        // Use same normalization as surface generation
+        const surface = surfaceType === 'mse' ? mseSurface : logLossSurface;
+        const range = surface.maxVal - surface.minVal;
+
+        // For SSE, use sqrt-scale like in surface generation
+        let normalizedVal;
+        let heightMult;
+        if (surfaceType === 'mse') {
+            const sqrtVal = Math.sqrt(loss);
+            normalizedVal = (sqrtVal - surface.minVal) / range;
+            heightMult = 8;
+        } else {
+            normalizedVal = (loss - surface.minVal) / range;
+            heightMult = 6;
+        }
+        const ry = (normalizedVal * heightMult - 2.5) * scale;
+
         return { rx, ry, rz };
     }
 
@@ -645,15 +684,15 @@
             ctx.closePath();
             ctx.fillStyle = getColor(tri.t, colorScheme);
             ctx.fill();
-            ctx.strokeStyle = "rgba(255,255,255,0.1)";
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = "rgba(0,0,0,0.15)";
+            ctx.lineWidth = 0.3;
             ctx.stroke();
         });
 
         // Draw path history
         if (state.history.length > 0) {
             const pathPoints = state.history.map(h => {
-                const raw = toRawCoords(h.m, FIXED_B, h.loss, surfaceType);
+                const raw = toRawCoords(h.m, h.b, h.loss, surfaceType);
                 return project(raw.rx, raw.ry, raw.rz, width, height);
             });
 
@@ -668,15 +707,15 @@
         }
 
         // Draw current position
-        const calcLoss = surfaceType === 'mse' ? calculateMSE : calculateLogLoss;
-        const loss = calcLoss(state.visualM, FIXED_B);
-        const raw = toRawCoords(state.visualM, FIXED_B, loss, surfaceType);
+        const calcLoss = surfaceType === 'mse' ? calculateSSE : calculateLogLoss;
+        const loss = calcLoss(state.visualM, state.visualB);
+        const raw = toRawCoords(state.visualM, state.visualB, loss, surfaceType);
         const head = project(raw.rx, raw.ry, raw.rz, width, height);
 
         // Connect to last history point
         if (state.history.length > 0) {
             const lastH = state.history[state.history.length - 1];
-            const lastRaw = toRawCoords(lastH.m, FIXED_B, lastH.loss, surfaceType);
+            const lastRaw = toRawCoords(lastH.m, lastH.b, lastH.loss, surfaceType);
             const lastProj = project(lastRaw.rx, lastRaw.ry, lastRaw.rz, width, height);
             ctx.beginPath();
             ctx.moveTo(lastProj.x, lastProj.y);
@@ -705,41 +744,53 @@
     // ==========================================
     // GRADIENT DESCENT STEPS
     // ==========================================
-    function stepMSE() {
+    // LR multipliers to balance animation speed
+    const SSE_LR_MULT = 1.0;      // SSE has vanishing gradients, needs higher mult
+    const LOGLOSS_LR_MULT = 0.05; // LogLoss has large gradients, needs lower mult
+
+    function stepSSE() {
         if (mseState.isConverged) return;
 
-        const grad = calculateMSEGradient(mseState.targetM, FIXED_B);
+        const grad = calculateSSEGradient(mseState.targetM, mseState.targetB);
+        const gradMag = Math.sqrt(grad.dm * grad.dm + grad.db * grad.db);
 
-        if (Math.abs(grad) < 0.0005) {
+        if (gradMag < 0.01) {
             mseState.isConverged = true;
             return;
         }
 
         mseState.history.push({
             m: mseState.targetM,
-            loss: calculateMSE(mseState.targetM, FIXED_B)
+            b: mseState.targetB,
+            loss: calculateSSE(mseState.targetM, mseState.targetB)
         });
 
-        mseState.targetM = mseState.targetM - globalState.lr * grad;
+        const lr = globalState.lr * SSE_LR_MULT;
+        mseState.targetM = mseState.targetM - lr * grad.dm;
+        mseState.targetB = mseState.targetB - lr * grad.db;
         mseState.epoch++;
     }
 
     function stepLogLoss() {
         if (logLossState.isConverged) return;
 
-        const grad = calculateLogLossGradient(logLossState.targetM, FIXED_B);
+        const grad = calculateLogLossGradient(logLossState.targetM, logLossState.targetB);
+        const gradMag = Math.sqrt(grad.dm * grad.dm + grad.db * grad.db);
 
-        if (Math.abs(grad) < 0.0005) {
+        if (gradMag < 0.01) {
             logLossState.isConverged = true;
             return;
         }
 
         logLossState.history.push({
             m: logLossState.targetM,
-            loss: calculateLogLoss(logLossState.targetM, FIXED_B)
+            b: logLossState.targetB,
+            loss: calculateLogLoss(logLossState.targetM, logLossState.targetB)
         });
 
-        logLossState.targetM = logLossState.targetM - globalState.lr * grad;
+        const lr = globalState.lr * LOGLOSS_LR_MULT;
+        logLossState.targetM = logLossState.targetM - lr * grad.dm;
+        logLossState.targetB = logLossState.targetB - lr * grad.db;
         logLossState.epoch++;
     }
 
@@ -751,27 +802,18 @@
 
     function updateUI() {
         document.getElementById('mseEpoch').textContent = mseState.epoch;
-        document.getElementById('mseLoss').textContent = calculateMSE(mseState.visualM, FIXED_B).toFixed(4);
+        document.getElementById('mseLoss').textContent = calculateSSE(mseState.visualM, mseState.visualB).toFixed(3);
         document.getElementById('mseM').textContent = mseState.visualM.toFixed(3);
 
         document.getElementById('logLossEpoch').textContent = logLossState.epoch;
-        document.getElementById('logLossLoss').textContent = calculateLogLoss(logLossState.visualM, FIXED_B).toFixed(4);
+        document.getElementById('logLossLoss').textContent = calculateLogLoss(logLossState.visualM, logLossState.visualB).toFixed(3);
         document.getElementById('logLossM').textContent = logLossState.visualM.toFixed(3);
 
         // Update status box
         const statusBox = document.getElementById('statusBox');
         if (mseState.isConverged && logLossState.isConverged) {
-            const mseFinal = calculateMSE(mseState.visualM, FIXED_B);
-            const logLossFinal = calculateLogLoss(logLossState.visualM, FIXED_B);
-
-            // Check if MSE found a worse solution
-            if (mseState.visualM < 0.5) {
-                statusBox.className = 'info-box warning';
-                statusBox.innerHTML = `MSE stuck in local minimum (m=${mseState.visualM.toFixed(2)})!`;
-            } else {
-                statusBox.className = 'info-box success';
-                statusBox.innerHTML = 'Both converged to similar solutions';
-            }
+            statusBox.className = 'info-box warning';
+            statusBox.innerHTML = `SSE→(${mseState.visualM.toFixed(1)},${mseState.visualB.toFixed(1)}), LogLoss→(${logLossState.visualM.toFixed(1)},${logLossState.visualB.toFixed(1)})`;
         }
     }
 
@@ -780,25 +822,33 @@
             camera.rotY += 0.001;
         }
 
-        // Animate MSE
+        // Animate SSE (both m and b)
         if (globalState.isRunning && !mseState.isConverged) {
             const dm = mseState.targetM - mseState.visualM;
-            if (Math.abs(dm) < config.stepThreshold) {
+            const db = mseState.targetB - mseState.visualB;
+            const dist = Math.sqrt(dm*dm + db*db);
+            if (dist < config.stepThreshold) {
                 mseState.visualM = mseState.targetM;
-                stepMSE();
+                mseState.visualB = mseState.targetB;
+                stepSSE();
             } else {
                 mseState.visualM += dm * config.lerpFactor;
+                mseState.visualB += db * config.lerpFactor;
             }
         }
 
-        // Animate Log-Loss
+        // Animate Log-Loss (both m and b)
         if (globalState.isRunning && !logLossState.isConverged) {
             const dm = logLossState.targetM - logLossState.visualM;
-            if (Math.abs(dm) < config.stepThreshold) {
+            const db = logLossState.targetB - logLossState.visualB;
+            const dist = Math.sqrt(dm*dm + db*db);
+            if (dist < config.stepThreshold) {
                 logLossState.visualM = logLossState.targetM;
+                logLossState.visualB = logLossState.targetB;
                 stepLogLoss();
             } else {
                 logLossState.visualM += dm * config.lerpFactor;
+                logLossState.visualB += db * config.lerpFactor;
             }
         }
 
@@ -824,7 +874,7 @@
 
         if (globalState.isRunning) {
             btn.innerHTML = '<span>&#10074;&#10074;</span> Pause';
-            if (mseState.epoch === 0) stepMSE();
+            if (mseState.epoch === 0) stepSSE();
             if (logLossState.epoch === 0) stepLogLoss();
         } else {
             btn.innerHTML = '<span>&#9658;</span> Resume';
@@ -836,7 +886,9 @@
 
         mseState = {
             targetM: globalState.startM,
+            targetB: globalState.startB,
             visualM: globalState.startM,
+            visualB: globalState.startB,
             history: [],
             epoch: 0,
             isConverged: false
@@ -844,7 +896,9 @@
 
         logLossState = {
             targetM: globalState.startM,
+            targetB: globalState.startB,
             visualM: globalState.startM,
+            visualB: globalState.startB,
             history: [],
             epoch: 0,
             isConverged: false
@@ -852,7 +906,7 @@
 
         document.getElementById('startBtn').innerHTML = '<span>&#9658;</span> Start Descent';
         document.getElementById('statusBox').className = 'info-box warning';
-        document.getElementById('statusBox').innerHTML = 'MSE can get stuck in local minima!';
+        document.getElementById('statusBox').innerHTML = 'Press Start to begin gradient descent';
     }
 
     function setupCanvasInteractions(canvas) {
@@ -912,6 +966,12 @@
         document.getElementById('startMSlider').addEventListener('input', e => {
             globalState.startM = parseFloat(e.target.value);
             document.getElementById('startMValue').textContent = globalState.startM.toFixed(1);
+            resetSimulation();
+        });
+
+        document.getElementById('startBSlider').addEventListener('input', e => {
+            globalState.startB = parseFloat(e.target.value);
+            document.getElementById('startBValue').textContent = globalState.startB.toFixed(1);
             resetSimulation();
         });
 
