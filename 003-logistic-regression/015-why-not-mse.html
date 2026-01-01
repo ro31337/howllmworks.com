@@ -297,6 +297,55 @@
             font-size: 0.85rem;
         }
 
+        /* Sigmoid plot card */
+        .sigmoid-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+
+        .sigmoid-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .sigmoid-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .sigmoid-legend {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.sse { background: #f97316; }
+        .legend-dot.logloss { background: #22c55e; }
+        .legend-dot.data { background: #6366f1; border: 2px solid #4f46e5; }
+
+        #sigmoidCanvas {
+            width: 100%;
+            height: 180px;
+            display: block;
+        }
+
         @media (max-width: 900px) {
             .viz-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
             .controls-card { flex-direction: column; align-items: stretch; }
@@ -340,6 +389,19 @@
             <input type="range" id="startBSlider" min="-4" max="1" step="0.5" value="-2">
         </div>
 
+    </div>
+
+    <!-- Sigmoid Plot with Data Points -->
+    <div class="sigmoid-card">
+        <div class="sigmoid-card-header">
+            <div class="sigmoid-card-title">Data Points & Current Sigmoids</div>
+            <div class="sigmoid-legend">
+                <div class="legend-item"><div class="legend-dot data"></div> Data</div>
+                <div class="legend-item"><div class="legend-dot sse"></div> SSE Sigmoid</div>
+                <div class="legend-item"><div class="legend-dot logloss"></div> LogLoss Sigmoid</div>
+            </div>
+        </div>
+        <canvas id="sigmoidCanvas"></canvas>
     </div>
 
     <!-- Visualizations -->
@@ -852,7 +914,134 @@
         renderSurface(logLossCanvas, logLossSurface, logLossState, config.colors.logLoss, 'logLoss');
         updateUI();
 
+        renderSigmoidPlot();
         requestAnimationFrame(animate);
+    }
+
+    // ==========================================
+    // SIGMOID PLOT
+    // ==========================================
+    const sigmoidCanvas = document.getElementById('sigmoidCanvas');
+    const sigmoidCtx = sigmoidCanvas.getContext('2d');
+
+    function renderSigmoidPlot() {
+        const canvas = sigmoidCanvas;
+        const ctx = sigmoidCtx;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear
+        ctx.fillStyle = '#fafafa';
+        ctx.fillRect(0, 0, width, height);
+
+        // Margins
+        const margin = { left: 50, right: 20, top: 20, bottom: 30 };
+        const plotW = width - margin.left - margin.right;
+        const plotH = height - margin.top - margin.bottom;
+
+        // Data range
+        const xMin = -6, xMax = 6;
+        const yMin = -0.1, yMax = 1.1;
+
+        const toX = (x) => margin.left + (x - xMin) / (xMax - xMin) * plotW;
+        const toY = (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+
+        // Grid
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+
+        // Horizontal lines
+        for (let y = 0; y <= 1; y += 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(margin.left, toY(y));
+            ctx.lineTo(width - margin.right, toY(y));
+            ctx.stroke();
+        }
+
+        // Vertical lines
+        for (let x = -6; x <= 6; x += 2) {
+            ctx.beginPath();
+            ctx.moveTo(toX(x), margin.top);
+            ctx.lineTo(toX(x), height - margin.bottom);
+            ctx.stroke();
+        }
+
+        // Axes
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, toY(0));
+        ctx.lineTo(width - margin.right, toY(0));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(toX(0), margin.top);
+        ctx.lineTo(toX(0), height - margin.bottom);
+        ctx.stroke();
+
+        // Axis labels
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        for (let x = -6; x <= 6; x += 2) {
+            ctx.fillText(x.toString(), toX(x), height - margin.bottom + 15);
+        }
+        ctx.textAlign = 'right';
+        ctx.fillText('0', margin.left - 8, toY(0) + 4);
+        ctx.fillText('0.5', margin.left - 8, toY(0.5) + 4);
+        ctx.fillText('1', margin.left - 8, toY(1) + 4);
+
+        // Draw SSE sigmoid (orange)
+        ctx.beginPath();
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 2.5;
+        for (let px = 0; px <= plotW; px++) {
+            const x = xMin + (px / plotW) * (xMax - xMin);
+            const z = mseState.visualM * x + mseState.visualB;
+            const y = sigmoid(z);
+            if (px === 0) ctx.moveTo(toX(x), toY(y));
+            else ctx.lineTo(toX(x), toY(y));
+        }
+        ctx.stroke();
+
+        // Draw LogLoss sigmoid (green)
+        ctx.beginPath();
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2.5;
+        for (let px = 0; px <= plotW; px++) {
+            const x = xMin + (px / plotW) * (xMax - xMin);
+            const z = logLossState.visualM * x + logLossState.visualB;
+            const y = sigmoid(z);
+            if (px === 0) ctx.moveTo(toX(x), toY(y));
+            else ctx.lineTo(toX(x), toY(y));
+        }
+        ctx.stroke();
+
+        // Draw data points
+        for (let i = 0; i < data.x.length; i++) {
+            const px = toX(data.x[i]);
+            const py = toY(data.y[i]);
+
+            ctx.beginPath();
+            ctx.arc(px, py, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#6366f1';
+            ctx.fill();
+            ctx.strokeStyle = '#4f46e5';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Label
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(data.y[i].toString(), px, py + 3.5);
+        }
+
+        // Labels
+        ctx.fillStyle = '#374151';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('x', width - margin.right - 10, toY(0) - 5);
+        ctx.fillText('P(y=1)', margin.left + 5, margin.top + 12);
     }
 
     // ==========================================
@@ -939,6 +1128,11 @@
         logLossCanvas.width = logLossContainer.clientWidth;
         logLossCanvas.height = logLossContainer.clientHeight;
 
+        // Setup sigmoid canvas
+        const sigmoidCard = sigmoidCanvas.parentElement;
+        sigmoidCanvas.width = sigmoidCard.clientWidth - 40;
+        sigmoidCanvas.height = 180;
+
         setupCanvasInteractions(mseCanvas);
         setupCanvasInteractions(logLossCanvas);
 
@@ -968,6 +1162,7 @@
             mseCanvas.height = mseContainer.clientHeight;
             logLossCanvas.width = logLossContainer.clientWidth;
             logLossCanvas.height = logLossContainer.clientHeight;
+            sigmoidCanvas.width = sigmoidCard.clientWidth - 40;
         });
 
         resetSimulation();
