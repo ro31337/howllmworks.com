@@ -29,8 +29,8 @@
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #212529;
-            --accent-color: #8b5cf6; /* Purple for logistic regression */
-            --accent-hover: #7c3aed;
+            --accent-color: #3b82f6; /* Modern Blue */
+            --accent-hover: #2563eb;
             --secondary-text: #6c757d;
             --border-radius: 16px;
             --shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
@@ -147,10 +147,10 @@
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--accent-color);
-            background: #f5f3ff;
+            background: #f0f9ff;
             padding: 10px 20px;
             border-radius: 8px;
-            border: 1px solid #ddd6fe;
+            border: 1px solid #bae6fd;
             min-width: 280px;
             text-align: center;
         }
@@ -335,7 +335,7 @@
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        input:checked + .slider-toggle { background-color: var(--accent-color); }
+        input:checked + .slider-toggle { background-color: #3b82f6; }
         input:checked + .slider-toggle:before { transform: translateX(20px); }
 
         @media (max-width: 900px) {
@@ -437,9 +437,9 @@
         gridColor: 'rgba(0,0,0,0.1)',
         surfaceOpacity: 0.9,
         colors: {
-            low: [139, 92, 246],    // Purple (accent)
-            mid: [59, 130, 246],    // Blue
-            high: [253, 186, 116],  // Orange/Yellow
+            low: [59, 130, 246],    // Blue (accent)
+            mid: [33, 145, 140],    // Teal
+            high: [253, 231, 37],   // Yellow
             path: '#ffffff',
             point: '#ef4444'
         },
@@ -568,7 +568,7 @@
             const z0 = m * data.x[idx0] + b;
             const yHat0 = sigmoid(z0);
 
-            latex = `$$ J = -\\frac{1}{${M}}\\sum\\left[ y_i \\log(\\hat{y}_i) + (1-y_i)\\log(1-\\hat{y}_i) \\right] = \\color{#8b5cf6}{${loss.toFixed(4)}} $$`;
+            latex = `$$ J = -\\frac{1}{${M}}\\sum\\left[ y_i \\log(\\hat{y}_i) + (1-y_i)\\log(1-\\hat{y}_i) \\right] = \\color{#3b82f6}{${loss.toFixed(4)}} $$`;
         } else {
             latex = `$$ J(m,b) = -\\frac{1}{n}\\sum_{i=1}^{n}\\left[ y_i \\log(\\hat{y}_i) + (1-y_i)\\log(1-\\hat{y}_i) \\right] $$`;
         }
@@ -889,7 +889,7 @@
             x: curveX,
             y: curveY,
             mode: 'lines',
-            line: { color: '#8b5cf6', width: 3 },
+            line: { color: '#3b82f6', width: 3 },
             type: 'scatter',
             name: 'Sigmoid'
         };
