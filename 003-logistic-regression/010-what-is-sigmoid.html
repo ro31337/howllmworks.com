@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Что такое Сигмоида? - Интерактивное объяснение</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #f5576c;
+            --text-color: #2c3e50;
+            --bg-color: #f8f9fa;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 { color: var(--text-color); }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(120deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: #f1f3f5;
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.5);
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .formula-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            text-align: center;
+            font-size: 1.4em;
+            margin: 20px 0;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        /* Controls */
+        .controls {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e9ecef;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #dfe6e9;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .value-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-family: monospace;
+        }
+
+        /* Plot */
+        .plot-container {
+            height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: white;
+            border: 1px solid #e9ecef;
+        }
+
+        /* Explanation Section */
+        .sigmoid-explanation {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px dashed #e9ecef;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Что такое Сигмоида?</h1>
+    <p class="subtitle">Понимание функции активации через разные нотации</p>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="setMode('school')">Школа / Интуиция</button>
+        <button class="tab-btn" onclick="setMode('stats')">Статистика</button>
+        <button class="tab-btn" onclick="setMode('ml')">ML / Нейросети</button>
+        <button class="tab-btn" onclick="setMode('linalg')">Линейная алгебра</button>
+    </div>
+
+    <!-- Active Formula Display -->
+    <div class="section">
+        <div id="formula-container" class="formula-box"></div>
+        <div id="description-container" class="info-box"></div>
+    </div>
+
+    <!-- Interactive Area -->
+    <div class="grid-2">
+        <!-- Controls Side -->
+        <div class="controls">
+            <h3>Параметры</h3>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">
+                Изменяйте параметры ниже, чтобы увидеть, как меняется форма сигмоиды.
+            </p>
+            <div id="sliders-container">
+                <!-- Sliders injected by JS -->
+            </div>
+        </div>
+
+        <!-- Visualization Side -->
+        <div class="plot-container" id="sigmoidPlot"></div>
+    </div>
+
+    <!-- Core Concept Explanation -->
+    <div class="section sigmoid-explanation">
+        <h2>🌀 Единая суть: Сигмоида</h2>
+        <p>Несмотря на разные формулы записи \(z\), все они в итоге проходят через одну и ту же функцию — <strong>Сигмоиду</strong>.</p>
+        
+        <div class="formula-box">
+            $$ \sigma(z) = \frac{1}{1 + e^{-z}} $$
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+            <div>
+                <h3>Зачем это нужно?</h3>
+                <p>Линейная часть (\(z\)) может выдавать любые числа: от \(-\infty\) до \(+\infty\).<br>
+                Но нам часто нужна <strong>вероятность</strong> (от 0 до 1).</p>
+                <p>Сигмоида "сплющивает" любую прямую линию в S-образную кривую, которая всегда находится в диапазоне (0, 1).</p>
+            </div>
+            <div>
+                <h3>Свойства</h3>
+                <ul>
+                    <li>Если \(z = 0\), то \(\sigma(z) = 0.5\)</li>
+                    <li>Если \(z\) очень большое, \(\sigma(z) \to 1\)</li>
+                    <li>Если \(z\) очень маленькое, \(\sigma(z) \to 0\)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- State Management ---
+    const state = {
+        mode: 'school',
+        w0: 0,   // Bias / Intercept
+        w1: 1,   // Weight 1 / Slope
+        w2: 0.5, // Weight 2 (for multi-feature demo)
+        x2: 0    // Fixed input for 2nd feature
+    };
+
+    // --- Configuration for Modes ---
+    const modes = {
+        school: {
+            label: 'Школа / Интуиция',
+            formula: '$$ z = \\beta_0 + \\beta_1 x $$',
+            desc: '<strong>Одна фича, одна прямая.</strong> Самый простой и интуитивный вид. Мы смотрим, как \(x\) влияет на результат.',
+            sliders: [
+                { key: 'w0', label: '\\(\beta_0\) (сдвиг)', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: '\\(\beta_1\) (наклон)', min: -5, max: 5, step: 0.1 }
+            ]
+        },
+        stats: {
+            label: 'Статистика',
+            formula: '$$ z = \\beta_0 + \\beta_1 x_1 + \\beta_2 x_2 + \\dots $$',
+            desc: '<strong>Множественная регрессия.</strong> Каждая переменная (\(x_i\)) имеет свой вес (\\(\beta_i\)). Попробуйте изменить \(x_2\), чтобы увидеть, как влияние других факторов сдвигает кривую для \(x_1\).',
+            sliders: [
+                { key: 'w0', label: '\\(\beta_0\) (intercept)', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: '\\(\beta_1\) (вес x₁)', min: -5, max: 5, step: 0.1 },
+                { key: 'w2', label: '\\(\beta_2\) (вес x₂)', min: -5, max: 5, step: 0.1 },
+                { key: 'x2', label: '\(x_2\) (контекст)', min: -5, max: 5, step: 0.1 }
+            ]
+        },
+        ml: {
+            label: 'ML / Нейросети',
+            formula: '$$ z = w_1x_1 + w_2x_2 + \dots + b $$',
+            desc: '<strong>Язык нейросетей.</strong> То же самое, но другие обозначения: \(w\) (weights) вместо \(\beta\), и \(b\) (bias) вместо \(\beta_0\).',
+            sliders: [
+                { key: 'w0', label: 'b (bias)', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: 'w₁ (weight 1)', min: -5, max: 5, step: 0.1 },
+                { key: 'w2', label: 'w₂ (weight 2)', min: -5, max: 5, step: 0.1 },
+                { key: 'x2', label: 'x₂ (вход 2)', min: -5, max: 5, step: 0.1 }
+            ]
+        },
+        linalg: {
+            label: 'Линейная алгебра',
+            formula: '$$ z = \\mathbf{X}\\mathbf{w} + b $$',
+            desc: '<strong>Векторная форма.</strong> Самая компактная запись. Удобна для вычислений на видеокартах (GPU). \(\mathbf{w}\) — это вектор весов \([w_1, w_2]\).',
+            sliders: [
+                { key: 'w0', label: 'b (скаляр)', min: -5, max: 5, step: 0.1 },
+                { key: 'w1', label: 'w[0] (вектор)', min: -5, max: 5, step: 0.1 },
+                { key: 'w2', label: 'w[1] (вектор)', min: -5, max: 5, step: 0.1 },
+                { key: 'x2', label: 'x[1] (вход)', min: -5, max: 5, step: 0.1 }
+            ]
+        }
+    };
+
+    // --- Core Logic ---
+    function setMode(modeKey) {
+        state.mode = modeKey;
+        
+        // Update Tabs UI
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.includes(modes[modeKey].label.split(' / ')[0])) { // Simple matching
+                btn.classList.add('active');
+            }
+        });
+        // Better tab matching by index or logic if text differs, but simple contains check works for now or strict click mapping
+        // Re-implementing strictly based on onclick binding:
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(modeKey));
+        if (activeBtn) activeBtn.classList.add('active');
+
+        // Update Content
+        renderFormula();
+        renderSliders();
+        updatePlot();
+    }
+
+    function renderFormula() {
+        const config = modes[state.mode];
+        document.getElementById('formula-container').innerHTML = config.formula;
+        document.getElementById('description-container').innerHTML = config.desc;
+        // Trigger MathJax re-render
+        if (window.MathJax) {
+            MathJax.typesetPromise([document.getElementById('formula-container')]);
+            // Also re-render slider labels if they contain math
+            setTimeout(() => MathJax.typesetPromise([document.getElementById('sliders-container')]), 50);
+        }
+    }
+
+    function renderSliders() {
+        const container = document.getElementById('sliders-container');
+        container.innerHTML = '';
+        
+        modes[state.mode].sliders.forEach(sliderConfig => {
+            const group = document.createElement('div');
+            group.className = 'control-group';
+            
+            const labelRow = document.createElement('label');
+            labelRow.innerHTML = `<span>${sliderConfig.label}</span> <span class="value-badge" id="val-${sliderConfig.key}">${state[sliderConfig.key]}</span>`;
+            
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.min = sliderConfig.min;
+            input.max = sliderConfig.max;
+            input.step = sliderConfig.step;
+            input.value = state[sliderConfig.key];
+            
+            input.oninput = (e) => {
+                const val = parseFloat(e.target.value);
+                state[sliderConfig.key] = val;
+                document.getElementById(`val-${sliderConfig.key}`).textContent = val;
+                updatePlot();
+            };
+
+            group.appendChild(labelRow);
+            group.appendChild(input);
+            container.appendChild(group);
+        });
+        
+        // Render MathJax in labels
+        if (window.MathJax) {
+            MathJax.typesetPromise([container]);
+        }
+    }
+
+    function sigmoid(z) {
+        return 1 / (1 + Math.exp(-z));
+    }
+
+    function calculateZ(x1) {
+        // Base: w0 + w1*x1
+        let z = state.w0 + state.w1 * x1;
+        
+        // Add second feature effect if applicable (Stats, ML, LinAlg modes imply multi-feature potential)
+        // Even if School mode only shows w0/w1 sliders, the formula logic remains consistent.
+        // But School mode sliders don't include w2/x2, so they stay at default or whatever state has.
+        // To be clean, for School mode we might want to ignore w2/x2, but state persistence is fine.
+        
+        if (state.mode !== 'school') {
+            z += state.w2 * state.x2;
+        }
+        
+        return z;
+    }
+
+    function updatePlot() {
+        const xValues = [];
+        const yValues = [];
+        const zValues = []; // Store Z for coloring/hover maybe?
+
+        // Generate points
+        for (let x = -6; x <= 6; x += 0.1) {
+            xValues.push(x);
+            const z = calculateZ(x);
+            yValues.push(sigmoid(z));
+        }
+
+        const trace = {
+            x: xValues,
+            y: yValues,
+            mode: 'lines',
+            line: {
+                color: '#667eea',
+                width: 4
+            },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(102, 126, 234, 0.1)'
+        };
+
+        const layout = {
+            title: { text: 'График Сигмоиды', font: { size: 18, color: '#2c3e50' } },
+            xaxis: { 
+                title: 'x (или x₁)', 
+                zeroline: true, 
+                gridcolor: '#f1f3f5' 
+            },
+            yaxis: { 
+                title: 'Вероятность σ(z)', 
+                range: [-0.1, 1.1], 
+                gridcolor: '#f1f3f5' 
+            },
+            margin: { t: 40, r: 20, l: 50, b: 50 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)'
+        };
+
+        const config = { responsive: true, displayModeBar: false };
+
+        Plotly.newPlot('sigmoidPlot', [trace], layout, config);
+    }
+
+    // --- Init ---
+    // Wait for MathJax then render
+    window.addEventListener('load', () => {
+        setMode('school');
+    });
+
+</script>
+
+</body>
+</html>
