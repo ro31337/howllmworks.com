@@ -588,12 +588,12 @@
     // SURFACE GENERATION
     // ==========================================
     function initSurfaces() {
-        const mSteps = 100;
-        const bSteps = 100;
+        const mSteps = 50;  // Reduced from 100 for better performance
+        const bSteps = 50;
 
         // Clear existing surfaces
-        mseSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
-        logLossSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
+        mseSurface = { points: [], minVal: Infinity, maxVal: -Infinity, mSteps, bSteps };
+        logLossSurface = { points: [], minVal: Infinity, maxVal: -Infinity, mSteps, bSteps };
 
         // Generate SSE surface with sqrt-scale to reveal bumps
         for (let bi = 0; bi <= bSteps; bi++) {
@@ -994,15 +994,16 @@
         ctx.fillText('0.5', margin.left - 8, toY(0.5) + 4);
         ctx.fillText('1', margin.left - 8, toY(1) + 4);
 
-        // Draw SSE sigmoid (orange)
+        // Draw SSE sigmoid (orange) - use fixed 100 points instead of per-pixel
+        const curveSteps = 100;
         ctx.beginPath();
         ctx.strokeStyle = '#f97316';
         ctx.lineWidth = 2.5;
-        for (let px = 0; px <= plotW; px++) {
-            const x = xMin + (px / plotW) * (xMax - xMin);
+        for (let i = 0; i <= curveSteps; i++) {
+            const x = xMin + (i / curveSteps) * (xMax - xMin);
             const z = mseState.visualM * x + mseState.visualB;
             const y = sigmoid(z);
-            if (px === 0) ctx.moveTo(toX(x), toY(y));
+            if (i === 0) ctx.moveTo(toX(x), toY(y));
             else ctx.lineTo(toX(x), toY(y));
         }
         ctx.stroke();
@@ -1011,11 +1012,11 @@
         ctx.beginPath();
         ctx.strokeStyle = '#22c55e';
         ctx.lineWidth = 2.5;
-        for (let px = 0; px <= plotW; px++) {
-            const x = xMin + (px / plotW) * (xMax - xMin);
+        for (let i = 0; i <= curveSteps; i++) {
+            const x = xMin + (i / curveSteps) * (xMax - xMin);
             const z = logLossState.visualM * x + logLossState.visualB;
             const y = sigmoid(z);
-            if (px === 0) ctx.moveTo(toX(x), toY(y));
+            if (i === 0) ctx.moveTo(toX(x), toY(y));
             else ctx.lineTo(toX(x), toY(y));
         }
         ctx.stroke();
