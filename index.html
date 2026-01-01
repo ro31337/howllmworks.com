@@ -311,6 +311,30 @@
             </div>
         </a>
 
+        <a href="003-logistic-regression/015-why-not-mse.html" class="card">
+            <span class="badge badge-logistic">Loss Functions</span>
+            <div class="card-title" data-key="titleLG015">Why Not MSE for Classification?</div>
+            <div class="card-desc" data-key="descLG015">
+                Compare SSE/MSE vs Log-Loss for logistic regression. See why MSE creates a non-convex surface with local minima, while Log-Loss (Binary Cross-Entropy) is convex and reliable.
+            </div>
+        </a>
+
+        <a href="003-logistic-regression/018-where-the-convex-formula-for-logistic-regression-comes-from.html" class="card">
+            <span class="badge badge-logistic">Log-Loss</span>
+            <div class="card-title" data-key="titleLG018">Deriving the Log-Loss Formula</div>
+            <div class="card-desc" data-key="descLG018">
+                Interactive derivation of the Log-Loss (Binary Cross-Entropy) formula. Understand why we use -log(ŷ) and -log(1-ŷ) to measure classification error and how it penalizes confident wrong predictions.
+            </div>
+        </a>
+
+        <a href="003-logistic-regression/020-gradient-descent.html" class="card">
+            <span class="badge badge-logistic">Optimization</span>
+            <div class="card-title" data-key="titleLG020">Gradient Descent on Log-Loss</div>
+            <div class="card-desc" data-key="descLG020">
+                Watch gradient descent optimize logistic regression in real-time. See the ball roll down the convex Log-Loss surface while the sigmoid curve fits the data in the 2D view.
+            </div>
+        </a>
+
     </div>
 
     <script>
@@ -359,7 +383,13 @@
                 module3Title: "Module 3: Logistic Regression",
                 module3Subtitle: "From regression to classification with the Sigmoid function",
                 titleLG010: "Sigmoid Function Explorer",
-                descLG010: "Interactive visualization of the Sigmoid function — the heart of logistic regression. See how β₀ and β₁ parameters shape the probability curve, and explore equivalent notations used in statistics, ML, and linear algebra."
+                descLG010: "Interactive visualization of the Sigmoid function — the heart of logistic regression. See how β₀ and β₁ parameters shape the probability curve, and explore equivalent notations used in statistics, ML, and linear algebra.",
+                titleLG015: "Why Not MSE for Classification?",
+                descLG015: "Compare SSE/MSE vs Log-Loss for logistic regression. See why MSE creates a non-convex surface with local minima, while Log-Loss (Binary Cross-Entropy) is convex and reliable.",
+                titleLG018: "Deriving the Log-Loss Formula",
+                descLG018: "Interactive derivation of the Log-Loss (Binary Cross-Entropy) formula. Understand why we use -log(ŷ) and -log(1-ŷ) to measure classification error and how it penalizes confident wrong predictions.",
+                titleLG020: "Gradient Descent on Log-Loss",
+                descLG020: "Watch gradient descent optimize logistic regression in real-time. See the ball roll down the convex Log-Loss surface while the sigmoid curve fits the data in the 2D view."
             },
             ru: {
                 mainTitle: "Как работают LLM",
@@ -405,7 +435,13 @@
                 module3Title: "Модуль 3: Логистическая регрессия",
                 module3Subtitle: "От регрессии к классификации через функцию Sigmoid",
                 titleLG010: "Исследователь функции Sigmoid",
-                descLG010: "Интерактивная визуализация функции Sigmoid — сердца логистической регрессии. Смотрите, как параметры β₀ и β₁ формируют кривую вероятности, и изучайте эквивалентные записи из статистики, ML и линейной алгебры."
+                descLG010: "Интерактивная визуализация функции Sigmoid — сердца логистической регрессии. Смотрите, как параметры β₀ и β₁ формируют кривую вероятности, и изучайте эквивалентные записи из статистики, ML и линейной алгебры.",
+                titleLG015: "Почему не MSE для классификации?",
+                descLG015: "Сравнение SSE/MSE и Log-Loss для логистической регрессии. Смотрите, почему MSE создаёт невыпуклую поверхность с локальными минимумами, а Log-Loss (бинарная кросс-энтропия) выпуклая и надёжная.",
+                titleLG018: "Вывод формулы Log-Loss",
+                descLG018: "Интерактивный вывод формулы Log-Loss (бинарная кросс-энтропия). Поймите, почему мы используем -log(ŷ) и -log(1-ŷ) для измерения ошибки классификации и как это наказывает уверенные неправильные предсказания.",
+                titleLG020: "Градиентный спуск на Log-Loss",
+                descLG020: "Смотрите, как градиентный спуск оптимизирует логистическую регрессию в реальном времени. Шарик катится по выпуклой поверхности Log-Loss, пока сигмоида подстраивается под данные."
             }
         };
 
