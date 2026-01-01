@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Not MSE for Logistic Regression? Non-Convex vs Convex | How LLM Works</title>
+    <meta name="description" content="Visual comparison of MSE vs Log-Loss for Logistic Regression. See why MSE creates a non-convex surface with local minima, while Log-Loss is convex.">
+    <meta name="keywords" content="MSE, log-loss, non-convex, local minima, logistic regression, sigmoid, optimization, machine learning, AI education">
+    <meta name="author" content="How LLM Works">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://howllmworks.com/003-logistic-regression/015-why-not-mse.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://howllmworks.com/003-logistic-regression/015-why-not-mse.html">
+    <meta property="og:title" content="Why Not MSE for Logistic Regression?">
+    <meta property="og:description" content="Visual comparison showing why MSE fails for logistic regression - non-convex surface with local minima vs convex Log-Loss.">
+    <meta property="og:site_name" content="How LLM Works">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Why Not MSE for Logistic Regression?">
+    <meta name="twitter:description" content="See the difference between MSE (non-convex, many minima) and Log-Loss (convex, one minimum).">
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --accent-color: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --secondary-text: #6c757d;
+            --border-radius: 16px;
+            --shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+            --font-main: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 20px 40px;
+            background: var(--card-bg);
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .header-content p {
+            margin: 5px 0 0 0;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .controls-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-secondary { background: #e9ecef; color: var(--text-color); }
+        .btn-secondary:hover { background: #dee2e6; }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 200px;
+        }
+
+        .slider-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--secondary-text);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        .info-box {
+            margin-left: auto;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .info-box.warning {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+        }
+
+        .info-box.success {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #166534;
+        }
+
+        .viz-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .viz-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid transparent;
+        }
+
+        .viz-card.bad {
+            border-color: var(--danger-color);
+        }
+
+        .viz-card.good {
+            border-color: var(--success-color);
+        }
+
+        .viz-header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .viz-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 4px;
+            background: rgba(255,255,255,0.95);
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: inline-block;
+            backdrop-filter: blur(4px);
+        }
+
+        .viz-title.bad {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .viz-title.good {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .viz-subtitle {
+            font-size: 0.75rem;
+            color: var(--secondary-text);
+            background: rgba(255,255,255,0.9);
+            padding: 4px 12px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .viz-content {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: move;
+        }
+
+        .overlay-info {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            font-family: monospace;
+            font-size: 0.8rem;
+            pointer-events: none;
+            backdrop-filter: blur(5px);
+            min-width: 160px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .info-row:last-child { margin-bottom: 0; }
+        .info-label { color: var(--secondary-text); }
+        .info-value { font-weight: 700; color: var(--text-color); }
+        .info-value.bad { color: var(--danger-color); }
+        .info-value.good { color: var(--success-color); }
+
+        /* Marker for local minima */
+        .minima-marker {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+        }
+
+        .minima-marker.bad {
+            border-left: 3px solid var(--danger-color);
+        }
+
+        .minima-marker.good {
+            border-left: 3px solid var(--success-color);
+        }
+
+        /* Formula display */
+        .formula-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 6px;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 900px) {
+            .viz-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            .controls-card { flex-direction: column; align-items: stretch; }
+            .info-box { margin-left: 0; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Why Not MSE for Logistic Regression?</h1>
+        <p>Comparing MSE (Non-Convex) vs Log-Loss (Convex) Loss Surfaces</p>
+    </div>
+</header>
+
+<div class="main-container">
+    <!-- Controls -->
+    <div class="controls-card">
+        <div class="control-group">
+            <button class="btn btn-primary" id="startBtn">
+                <span id="playIcon">&#9658;</span> Start Descent
+            </button>
+            <button class="btn btn-secondary" id="resetBtn">
+                &#8635; Reset
+            </button>
+        </div>
+
+        <div class="slider-group">
+            <label>Learning Rate: <span id="lrValue">0.5</span></label>
+            <input type="range" id="lrSlider" min="0.1" max="2.0" step="0.1" value="0.5">
+        </div>
+
+        <div class="slider-group">
+            <label>Starting Point (m): <span id="startMValue">-0.5</span></label>
+            <input type="range" id="startMSlider" min="-1" max="1" step="0.1" value="-0.5">
+        </div>
+
+        <div class="info-box warning" id="statusBox">
+            MSE can get stuck in local minima!
+        </div>
+    </div>
+
+    <!-- Visualizations -->
+    <div class="viz-grid">
+        <!-- MSE Surface (Bad) -->
+        <div class="viz-card bad">
+            <div class="viz-header">
+                <div class="viz-title bad">MSE + Sigmoid</div>
+                <div class="viz-subtitle">Non-Convex: Multiple Local Minima</div>
+                <div class="formula-row">
+                    $$ J = \frac{1}{n}\sum(y - \sigma(mx+b))^2 $$
+                </div>
+            </div>
+            <div class="viz-content" id="mseContainer">
+                <canvas id="mseCanvas"></canvas>
+            </div>
+            <div class="overlay-info">
+                <div class="info-row"><span class="info-label">Epoch</span><span class="info-value" id="mseEpoch">0</span></div>
+                <div class="info-row"><span class="info-label">Loss</span><span class="info-value bad" id="mseLoss">0.00</span></div>
+                <div class="info-row"><span class="info-label">m</span><span class="info-value" id="mseM">0.00</span></div>
+            </div>
+            <div class="minima-marker bad">
+                <strong>Local Minima:</strong> Multiple valleys
+            </div>
+        </div>
+
+        <!-- Log-Loss Surface (Good) -->
+        <div class="viz-card good">
+            <div class="viz-header">
+                <div class="viz-title good">Log-Loss + Sigmoid</div>
+                <div class="viz-subtitle">Convex: Single Global Minimum</div>
+                <div class="formula-row">
+                    $$ J = -\frac{1}{n}\sum[y\log\hat{y} + (1-y)\log(1-\hat{y})] $$
+                </div>
+            </div>
+            <div class="viz-content" id="logLossContainer">
+                <canvas id="logLossCanvas"></canvas>
+            </div>
+            <div class="overlay-info">
+                <div class="info-row"><span class="info-label">Epoch</span><span class="info-value" id="logLossEpoch">0</span></div>
+                <div class="info-row"><span class="info-label">Loss</span><span class="info-value good" id="logLossLoss">0.00</span></div>
+                <div class="info-row"><span class="info-label">m</span><span class="info-value" id="logLossM">0.00</span></div>
+            </div>
+            <div class="minima-marker good">
+                <strong>Global Minimum:</strong> Single valley
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURATION
+    // ==========================================
+    const config = {
+        colors: {
+            mse: {
+                low: [239, 68, 68],     // Red
+                mid: [251, 146, 60],    // Orange
+                high: [254, 240, 138]   // Yellow
+            },
+            logLoss: {
+                low: [34, 197, 94],     // Green
+                mid: [59, 130, 246],    // Blue
+                high: [254, 240, 138]   // Yellow
+            }
+        },
+        lerpFactor: 0.1,
+        stepThreshold: 0.002
+    };
+
+    // Binary classification data (simplified for 2D visualization)
+    // We fix b and only vary m to show the 2D loss curve
+    const data = {
+        x: [1, 2, 3, 4, 5, 6, 7, 8],
+        y: [0, 0, 0, 0, 1, 1, 1, 1]
+    };
+    const M = data.x.length;
+    const FIXED_B = -4.5; // Fixed intercept
+
+    // State for both visualizations
+    let mseState = {
+        targetM: -0.5,
+        visualM: -0.5,
+        history: [],
+        epoch: 0,
+        isConverged: false
+    };
+
+    let logLossState = {
+        targetM: -0.5,
+        visualM: -0.5,
+        history: [],
+        epoch: 0,
+        isConverged: false
+    };
+
+    let globalState = {
+        lr: 0.5,
+        startM: -0.5,
+        isRunning: false
+    };
+
+    // Camera for both canvases (synchronized)
+    let camera = {
+        rotX: -0.4,
+        rotY: -0.5,
+        zoom: 2.0,
+        autoRotate: true,
+        isDragging: false,
+        lastMouse: { x: 0, y: 0 }
+    };
+
+    // Pre-computed surfaces
+    let mseSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
+    let logLossSurface = { points: [], minVal: Infinity, maxVal: -Infinity };
+
+    const mRange = { min: -1.5, max: 3.5 };
+    const bRange = { min: -10, max: 2 };
+
+    // ==========================================
+    // MATH FUNCTIONS
+    // ==========================================
+    function sigmoid(z) {
+        z = Math.max(-500, Math.min(500, z));
+        return 1 / (1 + Math.exp(-z));
+    }
+
+    // MSE with Sigmoid
+    function calculateMSE(m, b) {
+        let error = 0;
+        for (let i = 0; i < M; i++) {
+            const z = m * data.x[i] + b;
+            const yHat = sigmoid(z);
+            error += Math.pow(data.y[i] - yHat, 2);
+        }
+        return error / M;
+    }
+
+    // MSE Gradient
+    function calculateMSEGradient(m, b) {
+        let dm = 0;
+        for (let i = 0; i < M; i++) {
+            const z = m * data.x[i] + b;
+            const yHat = sigmoid(z);
+            const sigmoidDeriv = yHat * (1 - yHat);
+            dm += -2 * (data.y[i] - yHat) * sigmoidDeriv * data.x[i];
+        }
+        return dm / M;
+    }
+
+    // Log-Loss (Binary Cross-Entropy)
+    function calculateLogLoss(m, b) {
+        let loss = 0;
+        const epsilon = 1e-15;
+        for (let i = 0; i < M; i++) {
+            const z = m * data.x[i] + b;
+            const yHat = Math.max(epsilon, Math.min(1 - epsilon, sigmoid(z)));
+            loss += -(data.y[i] * Math.log(yHat) + (1 - data.y[i]) * Math.log(1 - yHat));
+        }
+        return loss / M;
+    }
+
+    // Log-Loss Gradient
+    function calculateLogLossGradient(m, b) {
+        let dm = 0;
+        for (let i = 0; i < M; i++) {
+            const z = m * data.x[i] + b;
+            const yHat = sigmoid(z);
+            dm += (yHat - data.y[i]) * data.x[i];
+        }
+        return dm / M;
+    }
+
+    // ==========================================
+    // SURFACE GENERATION
+    // ==========================================
+    function initSurfaces() {
+        const mSteps = 60;
+        const bSteps = 60;
+
+        // Generate MSE surface
+        for (let bi = 0; bi <= bSteps; bi++) {
+            const b = bRange.min + (bi / bSteps) * (bRange.max - bRange.min);
+            for (let mi = 0; mi <= mSteps; mi++) {
+                const m = mRange.min + (mi / mSteps) * (mRange.max - mRange.min);
+                const val = calculateMSE(m, b);
+                mseSurface.points.push({ m, b, val, mi, bi });
+                if (val < mseSurface.minVal) mseSurface.minVal = val;
+                if (val > mseSurface.maxVal) mseSurface.maxVal = val;
+            }
+        }
+
+        // Generate Log-Loss surface
+        for (let bi = 0; bi <= bSteps; bi++) {
+            const b = bRange.min + (bi / bSteps) * (bRange.max - bRange.min);
+            for (let mi = 0; mi <= mSteps; mi++) {
+                const m = mRange.min + (mi / mSteps) * (mRange.max - mRange.min);
+                const val = calculateLogLoss(m, b);
+                logLossSurface.points.push({ m, b, val, mi, bi });
+                if (val < logLossSurface.minVal) logLossSurface.minVal = val;
+                if (val > logLossSurface.maxVal) logLossSurface.maxVal = val;
+            }
+        }
+
+        // Compute 3D coordinates
+        const scale = 0.3;
+        mseSurface.points.forEach(p => {
+            p.rx = ((p.m - mRange.min) / (mRange.max - mRange.min) * 10 - 5) * scale;
+            p.rz = ((p.b - bRange.min) / (bRange.max - bRange.min) * 10 - 5) * scale;
+            p.ry = (Math.min(p.val * 8, 6) - 2) * scale;
+            p.t = (p.val - mseSurface.minVal) / (mseSurface.maxVal - mseSurface.minVal);
+        });
+
+        logLossSurface.points.forEach(p => {
+            p.rx = ((p.m - mRange.min) / (mRange.max - mRange.min) * 10 - 5) * scale;
+            p.rz = ((p.b - bRange.min) / (bRange.max - bRange.min) * 10 - 5) * scale;
+            p.ry = (Math.min(p.val * 2, 6) - 2) * scale;
+            p.t = (p.val - logLossSurface.minVal) / (logLossSurface.maxVal - logLossSurface.minVal);
+        });
+
+        // Generate triangles (shared structure)
+        const tris = [];
+        for (let bi = 0; bi < bSteps; bi++) {
+            for (let mi = 0; mi < mSteps; mi++) {
+                const i0 = bi * (mSteps + 1) + mi;
+                const i1 = i0 + 1;
+                const i2 = (bi + 1) * (mSteps + 1) + mi;
+                const i3 = i2 + 1;
+                tris.push([i0, i1, i2]);
+                tris.push([i1, i3, i2]);
+            }
+        }
+        mseSurface.triangles = tris;
+        logLossSurface.triangles = tris;
+    }
+
+    // ==========================================
+    // 3D RENDERING
+    // ==========================================
+    function project(x, y, z, width, height) {
+        const rx = x * Math.cos(camera.rotY) - z * Math.sin(camera.rotY);
+        const rz = x * Math.sin(camera.rotY) + z * Math.cos(camera.rotY);
+        const ry = y * Math.cos(camera.rotX) - rz * Math.sin(camera.rotX);
+        const rz2 = y * Math.sin(camera.rotX) + rz * Math.cos(camera.rotX);
+        const dist = 4.5;
+        const currentZoom = camera.zoom * 0.45;
+        const s = Math.min(width, height) * 0.9 * currentZoom;
+        const f = s / (rz2 + dist);
+        return { x: width/2 + rx * f, y: height/2 - ry * f, z: rz2 };
+    }
+
+    function getColor(t, colorScheme) {
+        t = Math.max(0, Math.min(1, t));
+        let cStart, cEnd, localT;
+        if (t < 0.5) {
+            cStart = colorScheme.low;
+            cEnd = colorScheme.mid;
+            localT = t * 2;
+        } else {
+            cStart = colorScheme.mid;
+            cEnd = colorScheme.high;
+            localT = (t - 0.5) * 2;
+        }
+        const r = Math.round(cStart[0] + (cEnd[0] - cStart[0]) * localT);
+        const g = Math.round(cStart[1] + (cEnd[1] - cStart[1]) * localT);
+        const b = Math.round(cStart[2] + (cEnd[2] - cStart[2]) * localT);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function toRawCoords(m, b, loss, surface) {
+        const scale = 0.3;
+        const rx = ((m - mRange.min) / (mRange.max - mRange.min) * 10 - 5) * scale;
+        const rz = ((b - bRange.min) / (bRange.max - bRange.min) * 10 - 5) * scale;
+        const lossScale = surface === 'mse' ? 8 : 2;
+        const ry = (Math.min(loss * lossScale, 6) - 2) * scale;
+        return { rx, ry, rz };
+    }
+
+    function renderSurface(canvas, surface, state, colorScheme, surfaceType) {
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        // Project all points
+        const projPoints = surface.points.map(p => {
+            const proj = project(p.rx, p.ry, p.rz, width, height);
+            return { ...p, px: proj.x, py: proj.y, pz: proj.z };
+        });
+
+        // Sort and render triangles
+        const renderList = surface.triangles.map(tri => {
+            const p0 = projPoints[tri[0]];
+            const p1 = projPoints[tri[1]];
+            const p2 = projPoints[tri[2]];
+            return { p0, p1, p2, z: (p0.pz + p1.pz + p2.pz) / 3, t: (p0.t + p1.t + p2.t) / 3 };
+        }).sort((a, b) => b.z - a.z);
+
+        renderList.forEach(tri => {
+            ctx.beginPath();
+            ctx.moveTo(tri.p0.px, tri.p0.py);
+            ctx.lineTo(tri.p1.px, tri.p1.py);
+            ctx.lineTo(tri.p2.px, tri.p2.py);
+            ctx.closePath();
+            ctx.fillStyle = getColor(tri.t, colorScheme);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.1)";
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        });
+
+        // Draw path history
+        if (state.history.length > 0) {
+            const pathPoints = state.history.map(h => {
+                const raw = toRawCoords(h.m, FIXED_B, h.loss, surfaceType);
+                return project(raw.rx, raw.ry, raw.rz, width, height);
+            });
+
+            ctx.beginPath();
+            ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+            for (let i = 1; i < pathPoints.length; i++) {
+                ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+            }
+            ctx.strokeStyle = "rgba(255,255,255,0.8)";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        // Draw current position
+        const calcLoss = surfaceType === 'mse' ? calculateMSE : calculateLogLoss;
+        const loss = calcLoss(state.visualM, FIXED_B);
+        const raw = toRawCoords(state.visualM, FIXED_B, loss, surfaceType);
+        const head = project(raw.rx, raw.ry, raw.rz, width, height);
+
+        // Connect to last history point
+        if (state.history.length > 0) {
+            const lastH = state.history[state.history.length - 1];
+            const lastRaw = toRawCoords(lastH.m, FIXED_B, lastH.loss, surfaceType);
+            const lastProj = project(lastRaw.rx, lastRaw.ry, lastRaw.rz, width, height);
+            ctx.beginPath();
+            ctx.moveTo(lastProj.x, lastProj.y);
+            ctx.lineTo(head.x, head.y);
+            ctx.strokeStyle = "rgba(255,255,255,0.8)";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        // Shadow
+        ctx.beginPath();
+        ctx.arc(head.x, head.y + 8, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fill();
+
+        // Ball
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = surfaceType === 'mse' ? '#ef4444' : '#22c55e';
+        ctx.fill();
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    // ==========================================
+    // GRADIENT DESCENT STEPS
+    // ==========================================
+    function stepMSE() {
+        if (mseState.isConverged) return;
+
+        const grad = calculateMSEGradient(mseState.targetM, FIXED_B);
+
+        if (Math.abs(grad) < 0.0005) {
+            mseState.isConverged = true;
+            return;
+        }
+
+        mseState.history.push({
+            m: mseState.targetM,
+            loss: calculateMSE(mseState.targetM, FIXED_B)
+        });
+
+        mseState.targetM = mseState.targetM - globalState.lr * grad;
+        mseState.epoch++;
+    }
+
+    function stepLogLoss() {
+        if (logLossState.isConverged) return;
+
+        const grad = calculateLogLossGradient(logLossState.targetM, FIXED_B);
+
+        if (Math.abs(grad) < 0.0005) {
+            logLossState.isConverged = true;
+            return;
+        }
+
+        logLossState.history.push({
+            m: logLossState.targetM,
+            loss: calculateLogLoss(logLossState.targetM, FIXED_B)
+        });
+
+        logLossState.targetM = logLossState.targetM - globalState.lr * grad;
+        logLossState.epoch++;
+    }
+
+    // ==========================================
+    // ANIMATION LOOP
+    // ==========================================
+    const mseCanvas = document.getElementById('mseCanvas');
+    const logLossCanvas = document.getElementById('logLossCanvas');
+
+    function updateUI() {
+        document.getElementById('mseEpoch').textContent = mseState.epoch;
+        document.getElementById('mseLoss').textContent = calculateMSE(mseState.visualM, FIXED_B).toFixed(4);
+        document.getElementById('mseM').textContent = mseState.visualM.toFixed(3);
+
+        document.getElementById('logLossEpoch').textContent = logLossState.epoch;
+        document.getElementById('logLossLoss').textContent = calculateLogLoss(logLossState.visualM, FIXED_B).toFixed(4);
+        document.getElementById('logLossM').textContent = logLossState.visualM.toFixed(3);
+
+        // Update status box
+        const statusBox = document.getElementById('statusBox');
+        if (mseState.isConverged && logLossState.isConverged) {
+            const mseFinal = calculateMSE(mseState.visualM, FIXED_B);
+            const logLossFinal = calculateLogLoss(logLossState.visualM, FIXED_B);
+
+            // Check if MSE found a worse solution
+            if (mseState.visualM < 0.5) {
+                statusBox.className = 'info-box warning';
+                statusBox.innerHTML = `MSE stuck in local minimum (m=${mseState.visualM.toFixed(2)})!`;
+            } else {
+                statusBox.className = 'info-box success';
+                statusBox.innerHTML = 'Both converged to similar solutions';
+            }
+        }
+    }
+
+    function animate() {
+        if (camera.autoRotate && !camera.isDragging) {
+            camera.rotY += 0.001;
+        }
+
+        // Animate MSE
+        if (globalState.isRunning && !mseState.isConverged) {
+            const dm = mseState.targetM - mseState.visualM;
+            if (Math.abs(dm) < config.stepThreshold) {
+                mseState.visualM = mseState.targetM;
+                stepMSE();
+            } else {
+                mseState.visualM += dm * config.lerpFactor;
+            }
+        }
+
+        // Animate Log-Loss
+        if (globalState.isRunning && !logLossState.isConverged) {
+            const dm = logLossState.targetM - logLossState.visualM;
+            if (Math.abs(dm) < config.stepThreshold) {
+                logLossState.visualM = logLossState.targetM;
+                stepLogLoss();
+            } else {
+                logLossState.visualM += dm * config.lerpFactor;
+            }
+        }
+
+        // Check if both converged
+        if (globalState.isRunning && mseState.isConverged && logLossState.isConverged) {
+            globalState.isRunning = false;
+            document.getElementById('startBtn').innerHTML = '<span>&#9658;</span> Start Descent';
+        }
+
+        renderSurface(mseCanvas, mseSurface, mseState, config.colors.mse, 'mse');
+        renderSurface(logLossCanvas, logLossSurface, logLossState, config.colors.logLoss, 'logLoss');
+        updateUI();
+
+        requestAnimationFrame(animate);
+    }
+
+    // ==========================================
+    // EVENT HANDLERS
+    // ==========================================
+    function toggleSimulation() {
+        globalState.isRunning = !globalState.isRunning;
+        const btn = document.getElementById('startBtn');
+
+        if (globalState.isRunning) {
+            btn.innerHTML = '<span>&#10074;&#10074;</span> Pause';
+            if (mseState.epoch === 0) stepMSE();
+            if (logLossState.epoch === 0) stepLogLoss();
+        } else {
+            btn.innerHTML = '<span>&#9658;</span> Resume';
+        }
+    }
+
+    function resetSimulation() {
+        globalState.isRunning = false;
+
+        mseState = {
+            targetM: globalState.startM,
+            visualM: globalState.startM,
+            history: [],
+            epoch: 0,
+            isConverged: false
+        };
+
+        logLossState = {
+            targetM: globalState.startM,
+            visualM: globalState.startM,
+            history: [],
+            epoch: 0,
+            isConverged: false
+        };
+
+        document.getElementById('startBtn').innerHTML = '<span>&#9658;</span> Start Descent';
+        document.getElementById('statusBox').className = 'info-box warning';
+        document.getElementById('statusBox').innerHTML = 'MSE can get stuck in local minima!';
+    }
+
+    function setupCanvasInteractions(canvas) {
+        canvas.addEventListener('mousedown', e => {
+            camera.isDragging = true;
+            camera.lastMouse = { x: e.clientX, y: e.clientY };
+            camera.autoRotate = false;
+        });
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            camera.zoom -= e.deltaY * 0.001;
+            camera.zoom = Math.max(0.5, Math.min(5, camera.zoom));
+        }, { passive: false });
+    }
+
+    window.addEventListener('mouseup', () => {
+        camera.isDragging = false;
+        camera.autoRotate = true;
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!camera.isDragging) return;
+        camera.rotY += (e.clientX - camera.lastMouse.x) * 0.01;
+        camera.rotX += (e.clientY - camera.lastMouse.y) * 0.01;
+        camera.rotX = Math.max(-1.5, Math.min(1.5, camera.rotX));
+        camera.lastMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
+    window.onload = function() {
+        initSurfaces();
+
+        // Setup canvases
+        const mseContainer = document.getElementById('mseContainer');
+        const logLossContainer = document.getElementById('logLossContainer');
+
+        mseCanvas.width = mseContainer.clientWidth;
+        mseCanvas.height = mseContainer.clientHeight;
+        logLossCanvas.width = logLossContainer.clientWidth;
+        logLossCanvas.height = logLossContainer.clientHeight;
+
+        setupCanvasInteractions(mseCanvas);
+        setupCanvasInteractions(logLossCanvas);
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', toggleSimulation);
+        document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+
+        document.getElementById('lrSlider').addEventListener('input', e => {
+            globalState.lr = parseFloat(e.target.value);
+            document.getElementById('lrValue').textContent = globalState.lr.toFixed(1);
+        });
+
+        document.getElementById('startMSlider').addEventListener('input', e => {
+            globalState.startM = parseFloat(e.target.value);
+            document.getElementById('startMValue').textContent = globalState.startM.toFixed(1);
+            resetSimulation();
+        });
+
+        window.addEventListener('resize', () => {
+            mseCanvas.width = mseContainer.clientWidth;
+            mseCanvas.height = mseContainer.clientHeight;
+            logLossCanvas.width = logLossContainer.clientWidth;
+            logLossCanvas.height = logLossContainer.clientHeight;
+        });
+
+        resetSimulation();
+        animate();
+    };
+</script>
+</body>
+</html>
