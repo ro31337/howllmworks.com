@@ -60,13 +60,40 @@
         /* --- Sidebar --- */
         .sidebar {
             width: 360px;
+            min-width: 280px;
+            max-width: 600px;
             background: var(--card-bg);
-            border-right: 1px solid #e2e8f0;
+            border-right: none;
             display: flex;
             flex-direction: column;
             z-index: 10;
             flex-shrink: 0;
             box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+        }
+
+        /* Resizer Handle */
+        .resizer {
+            width: 6px;
+            background: #e2e8f0;
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            position: relative;
+        }
+        .resizer:hover, .resizer.active {
+            background: var(--accent-color);
+        }
+        .resizer::after {
+            content: '⋮';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #94a3b8;
+            font-size: 12px;
+        }
+        .resizer:hover::after, .resizer.active::after {
+            color: white;
         }
 
         .sidebar-header {
@@ -196,13 +223,19 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 16px;
+            padding: 10px 12px;
             text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .formula-box .section-title {
+            margin-bottom: 6px;
         }
 
         .z-eq {
-            font-size: 1.1rem;
-            margin-bottom: 8px;
+            font-size: 0.95rem;
+            margin-bottom: 0;
+            overflow-x: auto;
         }
 
         .notation-toggle {
@@ -237,27 +270,6 @@
             overflow-y: auto;
         }
 
-        /* Top Bar: Cost Formula */
-        .top-bar {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 16px 24px;
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            min-height: 80px;
-        }
-
-        .formula-display {
-            flex: 1;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
         .switch-container {
             display: flex;
             align-items: center;
@@ -403,31 +415,52 @@
             </div>
         </div>
 
-        <!-- Equation -->
-        <div class="formula-box">
-            <div class="section-title" style="margin-bottom: 10px;">Linear Term (z)</div>
-            <div id="z-equation" class="z-eq">
-                $$ z = w \cdot x + b $$
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="main-content">
-    <!-- Top Bar: Loss Formula -->
-    <div class="top-bar">
-        <div class="formula-display" id="loss-formula">
-            <!-- MathJax Rendered -->
-            $$ J = -\frac{1}{m} \sum [y \ln(\sigma(z)) + (1-y) \ln(1-\sigma(z))] $$
-        </div>
-        <div class="switch-container">
+        <!-- Show Values Toggle -->
+        <div class="switch-container" style="justify-content: center; margin-bottom: 10px;">
             <span>Show Values</span>
             <label class="switch">
                 <input type="checkbox" id="valuesToggle">
                 <span class="slider-toggle"></span>
             </label>
         </div>
+
+        <!-- Step 1: Linear Term -->
+        <div class="formula-box">
+            <div class="section-title">Step 1: Linear Term</div>
+            <div id="z-equation" class="z-eq">
+                $$ z = w \cdot x + b $$
+            </div>
+        </div>
+
+        <!-- Step 2: Sigmoid -->
+        <div class="formula-box">
+            <div class="section-title">Step 2: Sigmoid (Prediction)</div>
+            <div id="sigmoid-equation" class="z-eq">
+                $$ \hat{y} = \sigma(z) = \frac{1}{1 + e^{-z}} $$
+            </div>
+        </div>
+
+        <!-- Step 3: Loss per point -->
+        <div class="formula-box">
+            <div class="section-title">Step 3: Loss (per point)</div>
+            <div id="loss-equation" class="z-eq">
+                $$ L = -[y \ln(\hat{y}) + (1-y) \ln(1-\hat{y})] $$
+            </div>
+        </div>
+
+        <!-- Step 4: Total Cost -->
+        <div class="formula-box">
+            <div class="section-title">Step 4: Total Cost</div>
+            <div id="cost-equation" class="z-eq">
+                $$ J = \frac{1}{m} \sum_{i=1}^{m} L_i $$
+            </div>
+        </div>
     </div>
+</div>
+
+<div class="resizer" id="resizer"></div>
+
+<div class="main-content">
 
     <!-- Plot -->
     <div class="viz-card">
@@ -535,40 +568,65 @@
     }
 
     function updateFormulas() {
-        // Update Z equation
-        const wStr = state.w.toFixed(2);
-        const bAbs = Math.abs(state.b).toFixed(2);
-        const bSign = state.b >= 0 ? '+' : '-';
+        const w = state.w;
+        const b = state.b;
+        const m = state.data.length;
+        const eps = 1e-15;
 
         const zEl = document.getElementById('z-equation');
-        zEl.innerHTML = `$$ z = \\underbrace{${wStr}}_{w} \\cdot x \\; ${bSign} \\; \\underbrace{${bAbs}}_{b} $$`;
-        if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([zEl]).catch(()=>{});
+        const sigEl = document.getElementById('sigmoid-equation');
+        const lossEl = document.getElementById('loss-equation');
+        const costEl = document.getElementById('cost-equation');
 
-        // Update Loss Formula
-        const lossEl = document.getElementById('loss-formula');
+        if (state.showValues && m > 0) {
+            // Calculate values for first point as example
+            const p0 = state.data[0];
+            const z0 = w * p0.x + b;
+            const yHat0 = Math.max(eps, Math.min(1 - eps, sigmoid(z0)));
+            const loss0 = -(p0.y * Math.log(yHat0) + (1 - p0.y) * Math.log(1 - yHat0));
 
-        if (state.showValues && state.data.length > 0) {
-            // Build expanded formula with actual values
-            const eps = 1e-15;
+            // Calculate all losses for total
             let lossTerms = [];
             let totalLoss = 0;
-
-            state.data.forEach((p, i) => {
-                const z = state.w * p.x + state.b;
+            state.data.forEach(p => {
+                const z = w * p.x + b;
                 const yHat = Math.max(eps, Math.min(1 - eps, sigmoid(z)));
                 const loss = -(p.y * Math.log(yHat) + (1 - p.y) * Math.log(1 - yHat));
                 totalLoss += loss;
                 lossTerms.push(loss.toFixed(2));
             });
+            const avgLoss = totalLoss / m;
 
-            const avgLoss = totalLoss / state.data.length;
+            // Format b sign
+            const bSign = b >= 0 ? '+' : '-';
+            const bAbs = Math.abs(b).toFixed(2);
+
+            // Step 1: z with example
+            zEl.innerHTML = `$$ z = \\underbrace{${w.toFixed(2)}}_{w} \\cdot \\underbrace{${p0.x.toFixed(1)}}_{x_1} ${bSign} \\underbrace{${bAbs}}_{b} = ${z0.toFixed(2)} $$`;
+
+            // Step 2: sigmoid with example
+            sigEl.innerHTML = `$$ \\hat{y} = \\frac{1}{1 + e^{-${z0.toFixed(2)}}} = ${yHat0.toFixed(4)} $$`;
+
+            // Step 3: loss with example
+            const y0 = p0.y;
+            lossEl.innerHTML = `$$ L = -[${y0} \\cdot \\ln(${yHat0.toFixed(3)}) + ${1-y0} \\cdot \\ln(${(1-yHat0).toFixed(3)})] = ${loss0.toFixed(3)} $$`;
+
+            // Step 4: total cost
             const sumStr = lossTerms.join(' + ');
+            costEl.innerHTML = `$$ J = \\frac{1}{${m}} (${sumStr}) = \\boxed{${avgLoss.toFixed(4)}} $$`;
 
-            lossEl.innerHTML = `$$ J = \\frac{1}{${state.data.length}} (${sumStr}) = \\boxed{${avgLoss.toFixed(4)}} $$`;
         } else {
-            lossEl.innerHTML = `$$ J = -\\frac{1}{m} \\sum_{i=1}^{m} [y^{(i)} \\ln(\\hat{y}^{(i)}) + (1-y^{(i)}) \\ln(1-\\hat{y}^{(i)})] $$`;
+            // Generic formulas
+            zEl.innerHTML = `$$ z = \\underbrace{w}_{\\text{weight}} \\cdot x + \\underbrace{b}_{\\text{bias}} $$`;
+            sigEl.innerHTML = `$$ \\hat{y} = \\sigma(z) = \\frac{1}{1 + e^{-z}} $$`;
+            lossEl.innerHTML = `$$ L = -[y \\ln(\\hat{y}) + (1-y) \\ln(1-\\hat{y})] $$`;
+            costEl.innerHTML = `$$ J = \\frac{1}{m} \\sum_{i=1}^{m} L_i $$`;
         }
-        if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([lossEl]).catch(()=>{});
+
+        // Typeset all
+        if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise([zEl, sigEl, lossEl, costEl]).catch(()=>{});
+        }
     }
 
     // --- Plotly ---
@@ -762,6 +820,38 @@
 
         Plotly.react('plotDiv', [traceCurve, tracePass, traceFail], fullLayout, plotConfig);
     }
+
+    // --- Sidebar Resizer ---
+    const resizer = document.getElementById('resizer');
+    const sidebar = document.querySelector('.sidebar');
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizer.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const newWidth = e.clientX;
+        if (newWidth >= 280 && newWidth <= 600) {
+            sidebar.style.width = newWidth + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            // Resize plot after sidebar change
+            Plotly.Plots.resize('plotDiv');
+        }
+    });
 
     // --- Events ---
     document.getElementById('slider-w').addEventListener('input', (e) => {
