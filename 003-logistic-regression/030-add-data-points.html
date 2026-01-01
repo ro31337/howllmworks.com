@@ -859,17 +859,39 @@
 
         // 4. Residual lines from points to sigmoid
         const shapes = [];
+        const annotations = [];
 
-        // Data points residuals (subtle)
-        state.data.forEach(p => {
+        // Data points residuals (subtle) with labels only when showValues
+        state.data.forEach((p, i) => {
             const yHat = sigmoid(state.w * p.x + state.b);
             const color = p.y === 1 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+
             shapes.push({
                 type: 'line',
                 x0: p.x, y0: p.y,
                 x1: p.x, y1: yHat,
                 line: { color: color, width: 1.5, dash: 'dot' }
             });
+
+            // Annotation only when Show Values is ON
+            if (state.showValues) {
+                const textColor = p.y === 1 ? '#16a34a' : '#dc2626';
+                const midY = (p.y + yHat) / 2;
+                const labelText = p.y === 0
+                    ? `1-ŷ=${(1-yHat).toFixed(2)}`
+                    : `ŷ=${yHat.toFixed(2)}`;
+
+                annotations.push({
+                    x: p.x,
+                    y: midY,
+                    xanchor: 'left',
+                    yanchor: 'middle',
+                    text: labelText,
+                    showarrow: false,
+                    font: { size: 10, color: textColor },
+                    xshift: 5
+                });
+            }
         });
 
         // Test point residual (more visible)
@@ -880,9 +902,26 @@
             line: { color: '#f97316', width: 2, dash: 'dash' }
         });
 
-        // Merge shapes into layout
+        // Test point annotation only when Show Values is ON
+        if (state.showValues) {
+            const tpMidY = (tp.y + tpYHat) / 2;
+            const tpLabel = tp.y === 0 ? `1-ŷ=${(1-tpYHat).toFixed(2)}` : `ŷ=${tpYHat.toFixed(2)}`;
+            annotations.push({
+                x: tp.x,
+                y: tpMidY,
+                xanchor: 'left',
+                yanchor: 'middle',
+                text: tpLabel,
+                showarrow: false,
+                font: { size: 11, color: '#ea580c', weight: 'bold' },
+                xshift: 5
+            });
+        }
+
+        // Merge shapes and annotations into layout
         const fullLayout = Object.assign({}, plotLayout, {
             shapes: shapes,
+            annotations: annotations,
             datarevision: Date.now()
         });
 
