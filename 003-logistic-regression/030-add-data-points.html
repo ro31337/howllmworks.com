@@ -386,10 +386,6 @@
         <div class="control-section">
             <div class="section-title">Model Parameters</div>
             
-            <button class="btn btn-primary" onclick="autoFit()" id="fitBtn">
-                <span>✨ Auto-Fit (Gradient Descent)</span>
-            </button>
-
             <div class="slider-container">
                 <div class="slider-header">
                     <label style="color: var(--weight-color);">Weight (w)</label>
@@ -475,27 +471,30 @@
 
     // --- Data Management ---
     function addDataPoint(y) {
-        // Find a nice x spot: average of existing or 0
-        let newX = 0;
+        // Find a nice x spot
+        let newX = 2.5;
         if (state.data.length > 0) {
-            // Place it slightly offset from the last point
             newX = state.data[state.data.length - 1].x + 0.5;
-            if (newX > 8) newX = 0; // Wrap around if too far
-        } else {
-            newX = 2.5;
+            if (newX > 7) newX = 0.5;
         }
         state.data.push({ x: newX, y: y });
-        updateView();
+        autoFit();
     }
 
     function clearData() {
         state.data = [];
+        state.w = 1.0;
+        state.b = 0.0;
+        updateControls();
         updateView();
     }
 
     // --- Gradient Descent (Auto-Fit) ---
     function autoFit() {
-        if (state.data.length === 0) return;
+        if (state.data.length === 0) {
+            updateView();
+            return;
+        }
 
         let w = state.w;
         let b = state.b;
@@ -633,16 +632,9 @@
             let xVal = xaxis.p2d(xPx - xaxis._offset);
             
             // Clamp X
-            xVal = Math.max(-2, Math.min(10, xVal));
-            
+            xVal = Math.max(-1, Math.min(8, xVal));
             state.data[dragIndex].x = xVal;
-            
-            // Real-time update
-            requestAnimationFrame(() => {
-                // If we want "live auto-fit", uncomment:
-                // autoFit(); 
-                updateView();
-            });
+            autoFit();
         });
 
         document.addEventListener('mouseup', () => {
@@ -673,7 +665,7 @@
 
             if (hit !== -1) {
                 state.data.splice(hit, 1);
-                updateView();
+                autoFit();
             }
         });
     }
