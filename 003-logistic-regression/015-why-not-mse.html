@@ -340,9 +340,6 @@
             <input type="range" id="startBSlider" min="-4" max="1" step="0.5" value="-2">
         </div>
 
-        <div class="info-box warning" id="statusBox">
-            Press Start to begin gradient descent
-        </div>
     </div>
 
     <!-- Visualizations -->
@@ -808,13 +805,6 @@
         document.getElementById('logLossEpoch').textContent = logLossState.epoch;
         document.getElementById('logLossLoss').textContent = calculateLogLoss(logLossState.visualM, logLossState.visualB).toFixed(3);
         document.getElementById('logLossM').textContent = logLossState.visualM.toFixed(3);
-
-        // Update status box
-        const statusBox = document.getElementById('statusBox');
-        if (mseState.isConverged && logLossState.isConverged) {
-            statusBox.className = 'info-box warning';
-            statusBox.innerHTML = `SSE→(${mseState.visualM.toFixed(1)},${mseState.visualB.toFixed(1)}), LogLoss→(${logLossState.visualM.toFixed(1)},${logLossState.visualB.toFixed(1)})`;
-        }
     }
 
     function animate() {
@@ -905,8 +895,6 @@
         };
 
         document.getElementById('startBtn').innerHTML = '<span>&#9658;</span> Start Descent';
-        document.getElementById('statusBox').className = 'info-box warning';
-        document.getElementById('statusBox').innerHTML = 'Press Start to begin gradient descent';
     }
 
     function setupCanvasInteractions(canvas) {
