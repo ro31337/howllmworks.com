@@ -423,7 +423,7 @@
         <div class="switch-container">
             <span>Show Values</span>
             <label class="switch">
-                <input type="checkbox" id="valuesToggle" onchange="updateView()">
+                <input type="checkbox" id="valuesToggle">
                 <span class="slider-toggle"></span>
             </label>
         </div>
@@ -437,6 +437,7 @@
             <div class="helper-item">Double-click point to delete</div>
         </div>
     </div>
+
 </div>
 
 <script>
@@ -534,7 +535,7 @@
     }
 
     function updateFormulas() {
-        // Update Z equation with colored values using spans
+        // Update Z equation
         const wStr = state.w.toFixed(2);
         const bAbs = Math.abs(state.b).toFixed(2);
         const bSign = state.b >= 0 ? '+' : '-';
@@ -545,10 +546,25 @@
 
         // Update Loss Formula
         const lossEl = document.getElementById('loss-formula');
-        const lossVal = calculateLoss(state.w, state.b).toFixed(4);
 
-        if (state.showValues) {
-            lossEl.innerHTML = `$$ J = \\frac{1}{${state.data.length}} \\sum \\text{Loss}_i = \\boxed{${lossVal}} $$`;
+        if (state.showValues && state.data.length > 0) {
+            // Build expanded formula with actual values
+            const eps = 1e-15;
+            let lossTerms = [];
+            let totalLoss = 0;
+
+            state.data.forEach((p, i) => {
+                const z = state.w * p.x + state.b;
+                const yHat = Math.max(eps, Math.min(1 - eps, sigmoid(z)));
+                const loss = -(p.y * Math.log(yHat) + (1 - p.y) * Math.log(1 - yHat));
+                totalLoss += loss;
+                lossTerms.push(loss.toFixed(2));
+            });
+
+            const avgLoss = totalLoss / state.data.length;
+            const sumStr = lossTerms.join(' + ');
+
+            lossEl.innerHTML = `$$ J = \\frac{1}{${state.data.length}} (${sumStr}) = \\boxed{${avgLoss.toFixed(4)}} $$`;
         } else {
             lossEl.innerHTML = `$$ J = -\\frac{1}{m} \\sum_{i=1}^{m} [y^{(i)} \\ln(\\hat{y}^{(i)}) + (1-y^{(i)}) \\ln(1-\\hat{y}^{(i)})] $$`;
         }
@@ -645,29 +661,41 @@
             }
         });
         
-        // Double Click to Delete
-        plotDiv.addEventListener('dblclick', (e) => {
-             const rect = plotDiv.getBoundingClientRect();
+        // Double Click to Delete (using custom timing since Plotly captures dblclick)
+        let lastClickTime = 0;
+        let lastClickIdx = -1;
+
+        plotDiv.addEventListener('mousedown', (e) => {
+            const now = Date.now();
+            const rect = plotDiv.getBoundingClientRect();
             const xaxis = plotDiv._fullLayout.xaxis;
             const yaxis = plotDiv._fullLayout.yaxis;
-            
+
             const xPx = e.clientX - rect.left;
             const yPx = e.clientY - rect.top;
             const xVal = xaxis.p2d(xPx - xaxis._offset);
             const yVal = yaxis.p2d(yPx - yaxis._offset);
 
+            // Find clicked point
             let hit = -1;
             state.data.forEach((p, i) => {
                 const dx = Math.abs(p.x - xVal);
                 const dy = Math.abs(p.y - yVal);
-                if (dx < 0.5 && dy < 0.2) hit = i;
+                if (dx < 0.5 && dy < 0.25) hit = i;
             });
 
-            if (hit !== -1) {
+            // Check for double-click (same point, within 400ms)
+            if (hit !== -1 && hit === lastClickIdx && (now - lastClickTime) < 400) {
                 state.data.splice(hit, 1);
                 autoFit();
+                lastClickIdx = -1;
+                e.preventDefault();
+                e.stopPropagation();
+            } else {
+                lastClickTime = now;
+                lastClickIdx = hit;
             }
-        });
+        }, true);
     }
 
     function updatePlot() {
@@ -713,21 +741,18 @@
             hoverinfo: 'x'
         };
 
-        // 3. Loss Lines (Residuals) - only if "Values" is ON
+        // 3. Residual lines from points to sigmoid (always visible, subtle)
         const shapes = [];
-        if (state.showValues) {
-            state.data.forEach(p => {
-                const yHat = sigmoid(state.w * p.x + state.b);
-                const color = p.y === 1 ? '#22c55e' : '#ef4444';
-                shapes.push({
-                    type: 'line',
-                    x0: p.x, y0: p.y,
-                    x1: p.x, y1: yHat,
-                    line: { color: color, width: 2, dash: 'dot' },
-                    opacity: 0.5
-                });
+        state.data.forEach(p => {
+            const yHat = sigmoid(state.w * p.x + state.b);
+            const color = p.y === 1 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+            shapes.push({
+                type: 'line',
+                x0: p.x, y0: p.y,
+                x1: p.x, y1: yHat,
+                line: { color: color, width: 1.5, dash: 'dot' }
             });
-        }
+        });
 
         // Merge shapes into layout
         const fullLayout = Object.assign({}, plotLayout, {
@@ -759,8 +784,7 @@
     // --- Init ---
     window.addEventListener('load', () => {
         initPlot();
-        updateControls();
-        updateView();
+        autoFit(); // Fit to initial data
     });
 
     window.addEventListener('resize', () => {
