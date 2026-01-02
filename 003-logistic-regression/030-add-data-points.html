@@ -491,6 +491,9 @@
             <button class="btn" onclick="clearData()">
                 <span style="color: #ef4444;">&times;</span> Clear All Points
             </button>
+            <button class="btn" id="btn-copy-py" onclick="copyPythonScript()" title="Copy a runnable Python script for this data" style="margin-top: 10px;">
+                <span>📋 Copy Python Script</span>
+            </button>
         </div>
 
         <!-- Model Controls -->
@@ -684,7 +687,9 @@
         let w = state.w;
         let b = state.b;
         const lr = 0.5;
-        const epochs = 500;
+        const epochs = 5000;
+        const lambda = 0.01; // L2 regularization (sklearn C = 1/(lambda*m))
+        const m = state.data.length;
 
         for (let i = 0; i < epochs; i++) {
             let dw = 0, db = 0;
@@ -695,8 +700,11 @@
                 dw += err * p.x;
                 db += err;
             }
-            w -= (lr * dw) / state.data.length;
-            b -= (lr * db) / state.data.length;
+            // Average gradients, then add L2 regularization for w
+            dw = dw / m + lambda * w;
+            db = db / m;
+            w -= lr * dw;
+            b -= lr * db;
         }
 
         state.w = w;
@@ -1186,6 +1194,54 @@
     window.addEventListener('resize', () => {
         Plotly.Plots.resize('plotDiv');
     });
+
+    function copyPythonScript() {
+        if (state.data.length === 0) {
+            alert("No data points to generate script from.");
+            return;
+        }
+
+        const xValues = state.data.map(p => `[${p.x}]`).join(', ');
+        const yValues = state.data.map(p => p.y).join(', ');
+        const testX = state.testPoint.x;
+        const m = state.data.length;
+        const lambda = 0.01; // same as in autoFit()
+        const C = (1 / (lambda * m)).toFixed(2);
+
+        const script = `uv run --with numpy,scikit-learn python - <<'EOF'
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+# Data
+X = np.array([${xValues}])
+y = np.array([${yValues}])
+
+# Model: C = 1/(lambda * m) = 1/(0.01 * ${m}) = ${C}
+# This matches the visualization's mean-style gradient descent
+model = LogisticRegression(C=${C})
+
+# Train
+model.fit(X, y)
+
+print("w =", model.coef_[0][0])
+print("b =", model.intercept_[0])
+
+x = ${testX}
+print(f"P(pass | x={x}) =", model.predict_proba([[x]])[0][1])
+EOF`;
+
+        navigator.clipboard.writeText(script).then(() => {
+            const btn = document.getElementById('btn-copy-py');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<span>✅ Copied!</span>';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard.');
+        });
+    }
 
 </script>
 </body>
