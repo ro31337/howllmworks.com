@@ -225,6 +225,33 @@
         }
 
         /* Formula Box */
+        .monitoring-section {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 20px 12px 12px 12px;
+            margin: 16px 0;
+            position: relative;
+            background: rgba(248, 250, 252, 0.5);
+        }
+
+        .monitoring-label {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 2px 10px;
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
         .formula-box {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -521,21 +548,28 @@
 
         <div class="flow-arrow">↓</div>
 
-        <!-- Step 3: Loss per point -->
-        <div class="formula-box">
-            <div class="section-title">Step 3: Loss (per point)</div>
-            <div id="loss-equation" class="z-eq">
-                $$ L = -[y \ln(\hat{y}) + (1-y) \ln(1-\hat{y})] $$
+        <!-- Monitoring Section: Loss -->
+        <div class="monitoring-section">
+            <div class="monitoring-label">
+                <span>👁 Loss Calculation (Monitoring)</span>
             </div>
-        </div>
 
-        <div class="flow-arrow">↓</div>
+            <!-- Step 3: Loss per point -->
+            <div class="formula-box" style="background: white;">
+                <div class="section-title">Step 3: Loss (per point)</div>
+                <div id="loss-equation" class="z-eq">
+                    $$ L = -[y \ln(\hat{y}) + (1-y) \ln(1-\hat{y})] $$
+                </div>
+            </div>
 
-        <!-- Step 4: Total Cost -->
-        <div class="formula-box">
-            <div class="section-title">Step 4: Total Cost</div>
-            <div id="cost-equation" class="z-eq">
-                $$ J = \frac{1}{m} \sum_{i=1}^{m} L_i $$
+            <div class="flow-arrow" style="margin: 4px 0;">↓</div>
+
+            <!-- Step 4: Total Cost -->
+            <div class="formula-box" style="background: white;">
+                <div class="section-title">Step 4: Total Cost</div>
+                <div id="cost-equation" class="z-eq">
+                    $$ J = \frac{1}{m} \sum_{i=1}^{m} L_i $$
+                </div>
             </div>
         </div>
 
@@ -547,10 +581,11 @@
         <div class="backward-box">
             <div class="section-title" style="color: var(--accent-color);">Step 5: Compute Gradients</div>
             <div class="z-eq">
-                $$ \frac{\partial J}{\partial w}, \frac{\partial J}{\partial b} $$
+                $$ \frac{\partial J}{\partial w} = \frac{1}{m} \sum (\hat{y} - y) \cdot x $$
+                $$ \frac{\partial J}{\partial b} = \frac{1}{m} \sum (\hat{y} - y) $$
             </div>
             <div style="text-align: center; font-size: 0.8rem; color: var(--secondary-text); margin: 4px 0;">
-                (How much $w, b$ should change to reduce $J$)
+                (Derived from derivative of Loss function)
             </div>
         </div>
 
