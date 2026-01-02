@@ -892,7 +892,7 @@
 
             // Annotation only when Show Values is ON - show both ŷ and 1-ŷ
             if (state.showValues) {
-                const activeColor = p.y === 1 ? '#16a34a' : '#dc2626';
+                const activeColor = '#000';
                 const grayColor = '#aaa';
 
                 // For green (y=1): ŷ is active, 1-ŷ is gray
@@ -900,15 +900,28 @@
                 const line1Color = p.y === 1 ? activeColor : grayColor;
                 const line2Color = p.y === 1 ? grayColor : activeColor;
 
+                // Two separate annotations - right aligned, closer together
                 annotations.push({
                     x: p.x,
                     y: yHat,
-                    xanchor: 'left',
-                    yanchor: 'middle',
-                    text: `<span style="color:${line1Color}">ŷ = ${yHat.toFixed(3)}</span><br><span style="color:${line2Color}">1-ŷ = ${(1-yHat).toFixed(3)}</span>`,
+                    xanchor: 'right',
+                    yanchor: 'bottom',
+                    text: `<span style="color:${line1Color}">ŷ = ${yHat.toFixed(3)}</span>`,
                     showarrow: false,
                     font: { size: 13, family: 'serif' },
-                    xshift: 8
+                    xshift: -8,
+                    yshift: -2
+                });
+                annotations.push({
+                    x: p.x,
+                    y: yHat,
+                    xanchor: 'right',
+                    yanchor: 'top',
+                    text: `<span style="color:${line2Color}">1-ŷ = ${(1-yHat).toFixed(3)}</span>`,
+                    showarrow: false,
+                    font: { size: 13, family: 'serif' },
+                    xshift: -8,
+                    yshift: 2
                 });
             }
         });
@@ -926,19 +939,32 @@
             const tpActiveColor = '#ea580c';
             const tpGrayColor = '#aaa';
 
-            // For test point: same logic as data points
-            const tpLine1Color = tp.y === 1 ? tpActiveColor : tpGrayColor;
-            const tpLine2Color = tp.y === 1 ? tpGrayColor : tpActiveColor;
+            // For test point: same logic as data points (black for active, gray for inactive)
+            const tpLine1Color = tp.y === 1 ? '#000' : tpGrayColor;
+            const tpLine2Color = tp.y === 1 ? tpGrayColor : '#000';
 
+            // Two separate annotations - right aligned, closer together
             annotations.push({
                 x: tp.x,
                 y: tpYHat,
-                xanchor: 'left',
-                yanchor: 'middle',
-                text: `<span style="color:${tpLine1Color}">ŷ = ${tpYHat.toFixed(3)}</span><br><span style="color:${tpLine2Color}">1-ŷ = ${(1-tpYHat).toFixed(3)}</span>`,
+                xanchor: 'right',
+                yanchor: 'bottom',
+                text: `<span style="color:${tpLine1Color}">ŷ = ${tpYHat.toFixed(3)}</span>`,
                 showarrow: false,
                 font: { size: 14, family: 'serif' },
-                xshift: 8
+                xshift: -8,
+                yshift: -2
+            });
+            annotations.push({
+                x: tp.x,
+                y: tpYHat,
+                xanchor: 'right',
+                yanchor: 'top',
+                text: `<span style="color:${tpLine2Color}">1-ŷ = ${(1-tpYHat).toFixed(3)}</span>`,
+                showarrow: false,
+                font: { size: 14, family: 'serif' },
+                xshift: -8,
+                yshift: 2
             });
         }
 
