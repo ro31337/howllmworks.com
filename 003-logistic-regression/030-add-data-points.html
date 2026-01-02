@@ -668,7 +668,7 @@
     // --- Plotly ---
     const plotLayout = {
         margin: { t: 20, r: 20, b: 40, l: 50 },
-        xaxis: { title: 'Input (x)', range: [-1, 8], gridcolor: '#f1f5f9', fixedrange: true },
+        xaxis: { title: 'Input (x)', range: [0, 8], gridcolor: '#f1f5f9', fixedrange: true },
         yaxis: { title: 'Probability (y)', range: [-0.1, 1.1], gridcolor: '#f1f5f9', fixedrange: true },
         showlegend: false,
         hovermode: 'closest',
@@ -753,7 +753,7 @@
             let yVal = yaxis.p2d(yPx - yaxis._offset);
 
             // Clamp X
-            xVal = Math.max(-1, Math.min(8, xVal));
+            xVal = Math.max(0, Math.min(8, xVal));
 
             if (isDraggingTest) {
                 // Move test point (can move in Y too, snaps to 0 or 1)
@@ -813,7 +813,7 @@
     }
 
     function updatePlot() {
-        const xRange = [-1, 8];
+        const xRange = [0, 8];
 
         // 1. Sigmoid Curve
         const curveX = [];
