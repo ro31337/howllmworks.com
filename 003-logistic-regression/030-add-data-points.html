@@ -345,6 +345,72 @@
             align-items: center;
             gap: 6px;
         }
+
+        /* --- Pass Visualization (Forward/Backward) --- */
+        .pass-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--secondary-text);
+            margin: 20px 0 10px 0;
+            letter-spacing: 0.05em;
+        }
+        .pass-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .pass-header.backward {
+            color: var(--accent-color);
+            margin-top: 30px;
+        }
+        .pass-header.backward::after {
+            background: var(--accent-color);
+            opacity: 0.3;
+        }
+        
+        .flow-arrow {
+            text-align: center;
+            color: #cbd5e1;
+            margin: -6px 0;
+            font-size: 1.2rem;
+            line-height: 1;
+            user-select: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .backward-box {
+            background: #eff6ff; /* Light blue tint */
+            border: 1px dashed var(--accent-color);
+            border-radius: 8px;
+            padding: 12px;
+            position: relative;
+        }
+        
+        .loop-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--secondary-text);
+            padding: 8px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .loop-arrow-icon {
+            font-size: 1.2em;
+            color: var(--accent-color);
+            transform: rotate(-90deg); /* Point up */
+        }
         
         .icon-mouse {
             width: 16px;
@@ -424,6 +490,11 @@
             </label>
         </div>
 
+        <!-- === FORWARD PASS === -->
+        <div class="pass-header">
+            <span>⬇ Forward Pass</span>
+        </div>
+
         <!-- Step 1: Linear Term -->
         <div class="formula-box">
             <div class="section-title">Step 1: Linear Term</div>
@@ -431,6 +502,8 @@
                 $$ z = w \cdot x + b $$
             </div>
         </div>
+
+        <div class="flow-arrow">↓</div>
 
         <!-- Step 2: Sigmoid -->
         <div class="formula-box">
@@ -440,6 +513,8 @@
             </div>
         </div>
 
+        <div class="flow-arrow">↓</div>
+
         <!-- Step 3: Loss per point -->
         <div class="formula-box">
             <div class="section-title">Step 3: Loss (per point)</div>
@@ -448,12 +523,45 @@
             </div>
         </div>
 
+        <div class="flow-arrow">↓</div>
+
         <!-- Step 4: Total Cost -->
         <div class="formula-box">
             <div class="section-title">Step 4: Total Cost</div>
             <div id="cost-equation" class="z-eq">
                 $$ J = \frac{1}{m} \sum_{i=1}^{m} L_i $$
             </div>
+        </div>
+
+        <!-- === BACKWARD PASS === -->
+        <div class="pass-header backward">
+            <span>↺ Backward Pass</span>
+        </div>
+
+        <div class="backward-box">
+            <div class="section-title" style="color: var(--accent-color);">Step 5: Compute Gradients</div>
+            <div class="z-eq">
+                $$ \frac{\partial J}{\partial w}, \frac{\partial J}{\partial b} $$
+            </div>
+            <div style="text-align: center; font-size: 0.8rem; color: var(--secondary-text); margin: 4px 0;">
+                (How much $w, b$ should change to reduce $J$)
+            </div>
+        </div>
+
+        <div class="flow-arrow" style="color: var(--accent-color);">↓</div>
+
+        <div class="backward-box">
+            <div class="section-title" style="color: var(--accent-color);">Step 6: Update Parameters</div>
+            <div class="z-eq">
+                $$ w \leftarrow w - \alpha \frac{\partial J}{\partial w} $$
+                $$ b \leftarrow b - \alpha \frac{\partial J}{\partial b} $$
+            </div>
+        </div>
+
+        <!-- Loop Indicator -->
+        <div class="loop-indicator">
+            <span class="loop-arrow-icon">➔</span>
+            <span>Repeat to Step 1 with new <b>w, b</b></span>
         </div>
     </div>
 </div>
