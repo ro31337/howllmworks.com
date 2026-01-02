@@ -613,18 +613,35 @@
             // Step 3: loss for test point AND all data points (each on new line)
             let lossLines = [];
 
-            // Test point loss (full formula)
-            lossLines.push(`L_t = -[${yLabel} \\cdot \\ln(${yHatTest.toFixed(3)}) + ${1-tp.y} \\cdot \\ln(${(1-yHatTest).toFixed(3)})] = ${lossTest.toFixed(2)}`);
+            // Test point loss (full formula) - gray out zero-multiplied terms
+            const tpTerm1 = `${yLabel} \\cdot \\ln(${yHatTest.toFixed(3)})`;
+            const tpTerm2 = `${1-tp.y} \\cdot \\ln(${(1-yHatTest).toFixed(3)})`;
+            const tpFormula = tp.y === 1
+                ? `${tpTerm1} + {\\color{lightgray} ${tpTerm2}}`
+                : `{\\color{lightgray} ${tpTerm1}} + ${tpTerm2}`;
+            lossLines.push(`L_t = -[${tpFormula}] = ${lossTest.toFixed(2)}`);
 
-            // Data points losses (each with full formula)
+            // Data points losses (each with full formula) - gray out zero-multiplied terms
             state.data.forEach((p, i) => {
                 const z = w * p.x + b;
                 const yHat = Math.max(eps, Math.min(1 - eps, sigmoid(z)));
                 const loss = -(p.y * Math.log(yHat) + (1 - p.y) * Math.log(1 - yHat));
-                lossLines.push(`L_${i+1} = -[${p.y} \\cdot \\ln(${yHat.toFixed(3)}) + ${1-p.y} \\cdot \\ln(${(1-yHat).toFixed(3)})] = ${loss.toFixed(2)}`);
+                const term1 = `${p.y} \\cdot \\ln(${yHat.toFixed(3)})`;
+                const term2 = `${1-p.y} \\cdot \\ln(${(1-yHat).toFixed(3)})`;
+                const formula = p.y === 1
+                    ? `${term1} + {\\color{lightgray} ${term2}}`
+                    : `{\\color{lightgray} ${term1}} + ${term2}`;
+                lossLines.push(`L_${i+1} = -[${formula}] = ${loss.toFixed(2)}`);
             });
 
-            lossEl.innerHTML = `\\begin{align} ${lossLines.join(' \\\\ ')} \\end{align}`;
+            // Join with extra space after Lt (test point)
+            const ltLine = lossLines[0];
+            const dataLines = lossLines.slice(1);
+            if (dataLines.length > 0) {
+                lossEl.innerHTML = `\\begin{align} ${ltLine} \\\\[8pt] ${dataLines.join(' \\\\ ')} \\end{align}`;
+            } else {
+                lossEl.innerHTML = `\\begin{align} ${ltLine} \\end{align}`;
+            }
 
             // Step 4: total cost (from data points)
             if (m > 0) {
