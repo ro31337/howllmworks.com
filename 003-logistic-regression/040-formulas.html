@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistic Regression Formulas - Sigmoid, Log-Loss, BCE Explained | How LLM Works</title>
+    <meta name="description" content="Complete guide to Logistic Regression formulas. Learn Sigmoid function, Log-Loss (Binary Cross-Entropy), and gradient descent formulas with clear explanations.">
+    <meta name="keywords" content="logistic regression, sigmoid function, log-loss, binary cross-entropy, BCE, classification, machine learning formulas, AI education">
+    <meta name="author" content="How LLM Works">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://howllmworks.com/003-logistic-regression/040-formulas.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://howllmworks.com/003-logistic-regression/040-formulas.html">
+    <meta property="og:title" content="Logistic Regression Formulas - Sigmoid, Log-Loss, BCE Explained">
+    <meta property="og:description" content="Complete guide to Logistic Regression formulas. Learn Sigmoid, Log-Loss, and gradient descent for classification.">
+    <meta property="og:site_name" content="How LLM Works">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Logistic Regression Formulas - Sigmoid, Log-Loss, BCE Explained">
+    <meta name="twitter:description" content="Complete guide to Logistic Regression formulas. Learn Sigmoid, Log-Loss, and gradient descent for classification.">
+
+    <!-- MathJax for rendering formulas -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #667eea;
+            --secondary-color: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --math-color: #2c3e50;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lang-switch-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .lang-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--secondary-color);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: #f0f0f0;
+        }
+
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            color: var(--text-color);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 0 20px 60px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .formula-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 120px;
+        }
+
+        .text-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .explanation {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .explanation p {
+            margin-bottom: 8px;
+        }
+
+        .explanation ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .explanation li {
+            margin-bottom: 4px;
+        }
+
+        .highlight {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .note {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .card {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 25px;
+            }
+            .formula-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lang-switch-container">
+        <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('ru')">RU</button>
+    </div>
+
+    <div class="header">
+        <h1 data-key="mainTitle">Logistic Regression Formulas</h1>
+        <div class="subtitle" data-key="mainSubtitle">Sigmoid, Log-Loss (Binary Cross-Entropy) & Gradient Descent</div>
+    </div>
+
+    <div class="container">
+
+        <!-- SIGMOID CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ \sigma(z) = \frac{1}{1 + e^{-z}} $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="sigmoidTitle">Sigmoid Function</div>
+                <div class="explanation">
+                    <p data-key="sigmoidWhat"><strong>What it is:</strong> Transforms any number into a probability between 0 and 1.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="sigmoidReason1">Converts unbounded linear output to probability range [0, 1].</li>
+                        <li data-key="sigmoidReason2">Smooth and differentiable everywhere (gradient descent works).</li>
+                        <li data-key="sigmoidReason3">Output can be interpreted as P(y=1|x).</li>
+                    </ul>
+                    <p class="note" data-key="sigmoidNote">
+                        <em>Note:</em> When z=0, output is exactly 0.5 (decision boundary).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LINEAR COMBINATION (z) CARD -->
+        <div class="card">
+            <div class="formula-section" data-key="linearFormula">
+                $$ z = \beta_0 + \beta_1 x $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="linearTitle">Linear Combination (z)</div>
+                <div class="explanation">
+                    <div data-key="linearWhat"><strong>What it is:</strong> The input to the sigmoid function, a weighted sum of features.
+                    <ul>
+                        <li>\(x\): Input feature (e.g., hours studied)</li>
+                        <li>\(\beta_0\) (or \(b\)): Intercept / Bias</li>
+                        <li>\(\beta_1\) (or \(m\), \(w\)): Slope / Weight</li>
+                    </ul></div>
+                    <p class="note" data-key="linearNote">
+                        <em>Note:</em> Same as linear regression, but fed into sigmoid.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOG-LOSS (Single Point) CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ L = -[y \cdot \ln(\hat{y}) + (1-y) \cdot \ln(1-\hat{y})] $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="loglossSingleTitle">Log-Loss (Single Point)</div>
+                <div class="explanation">
+                    <p data-key="loglossSingleWhat"><strong>What it is:</strong> Loss for one prediction. Penalizes confident wrong predictions heavily.</p>
+                    <ul>
+                        <li data-key="loglossSingleCase1">If \(y=1\): Loss = \(-\ln(\hat{y})\). Small when \(\hat{y}\) is high.</li>
+                        <li data-key="loglossSingleCase2">If \(y=0\): Loss = \(-\ln(1-\hat{y})\). Small when \(\hat{y}\) is low.</li>
+                    </ul>
+                    <p class="note" data-key="loglossSingleNote">
+                        <em>Note:</em> Uses \(\ln\) (natural log). Loss approaches infinity as prediction approaches wrong extreme.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BINARY CROSS-ENTROPY (BCE) CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ J = -\frac{1}{n}\sum_{i=1}^{n}\left[ y_i \ln(\hat{y}_i) + (1-y_i)\ln(1-\hat{y}_i) \right] $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="bceTitle">Binary Cross-Entropy (BCE)</div>
+                <div class="explanation">
+                    <p data-key="bceWhat"><strong>What it is:</strong> Average Log-Loss across all training examples. The cost function to minimize.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="bceReason1">Creates a convex surface (single global minimum).</li>
+                        <li data-key="bceReason2">Gradient descent always converges to optimal solution.</li>
+                        <li data-key="bceReason3">Derived from Maximum Likelihood Estimation (MLE).</li>
+                    </ul>
+                    <p class="note" data-key="bceNote">
+                        <em>Also known as:</em> Log-Loss, Negative Log-Likelihood.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- WHY NOT MSE CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ J_{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2 $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="mseTitle">MSE with Sigmoid (Avoid!)</div>
+                <div class="explanation">
+                    <p data-key="mseWhat"><strong>What it is:</strong> Mean Squared Error applied to sigmoid output.</p>
+                    <p><strong data-key="whyBad">Why it's BAD:</strong></p>
+                    <ul>
+                        <li data-key="mseReason1">Creates a non-convex surface with local minima.</li>
+                        <li data-key="mseReason2">Gradient vanishes when sigmoid saturates (very slow learning).</li>
+                        <li data-key="mseReason3">Gradient descent may get stuck in wrong place.</li>
+                    </ul>
+                    <p class="note" data-key="mseNote">
+                        <em>Rule:</em> Use MSE for regression, Log-Loss for classification.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRADIENT DESCENT CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ \frac{\partial J}{\partial w} = \frac{1}{n}\sum_{i=1}^{n}(\hat{y}_i - y_i) \cdot x_i $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="gradientTitle">Gradient for Log-Loss</div>
+                <div class="explanation">
+                    <p data-key="gradientWhat"><strong>What it is:</strong> Direction to update weights to minimize loss.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="gradientReason1">Surprisingly simple: error \(\times\) input.</li>
+                        <li data-key="gradientReason2">Same form as linear regression gradient!</li>
+                        <li data-key="gradientReason3">No vanishing gradient problem (unlike MSE+Sigmoid).</li>
+                    </ul>
+                    <p class="note" data-key="gradientNote">
+                        <em>Update rule:</em> \(w := w - \alpha \cdot \frac{\partial J}{\partial w}\)
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PREDICTION CARD -->
+        <div class="card">
+            <div class="formula-section">
+                $$ \hat{y} = \begin{cases} 1 & \text{if } \sigma(z) \geq 0.5 \\ 0 & \text{if } \sigma(z) < 0.5 \end{cases} $$
+            </div>
+            <div class="text-section">
+                <div class="card-title" data-key="predictionTitle">Classification Decision</div>
+                <div class="explanation">
+                    <p data-key="predictionWhat"><strong>What it is:</strong> Converting probability to class label using threshold.</p>
+                    <p><strong data-key="whyUseful">Why it's useful:</strong></p>
+                    <ul>
+                        <li data-key="predictionReason1">Default threshold 0.5 = equal treatment of classes.</li>
+                        <li data-key="predictionReason2">Threshold can be adjusted for imbalanced datasets.</li>
+                        <li data-key="predictionReason3">Probability output allows confidence interpretation.</li>
+                    </ul>
+                    <p class="note" data-key="predictionNote">
+                        <em>Note:</em> Decision boundary is where \(z = 0\).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                mainTitle: "Logistic Regression Formulas",
+                mainSubtitle: "Sigmoid, Log-Loss (Binary Cross-Entropy) & Gradient Descent",
+                whyUseful: "Why it's useful:",
+                whyBad: "Why it's BAD:",
+
+                sigmoidTitle: "Sigmoid Function",
+                sigmoidWhat: "<strong>What it is:</strong> Transforms any number into a probability between 0 and 1.",
+                sigmoidReason1: "Converts unbounded linear output to probability range [0, 1].",
+                sigmoidReason2: "Smooth and differentiable everywhere (gradient descent works).",
+                sigmoidReason3: "Output can be interpreted as P(y=1|x).",
+                sigmoidNote: "<em>Note:</em> When z=0, output is exactly 0.5 (decision boundary).",
+
+                linearTitle: "Linear Combination (z)",
+                linearFormula: "$$ z = \\beta_0 + \\beta_1 x $$",
+                linearWhat: "<strong>What it is:</strong> The input to the sigmoid function, a weighted sum of features.<ul><li>\\(x\\): Input feature (e.g., hours studied)</li><li>\\(\\beta_0\\) (or \\(b\\)): Intercept / Bias</li><li>\\(\\beta_1\\) (or \\(m\\), \\(w\\)): Slope / Weight</li></ul>",
+                linearNote: "<em>Note:</em> Same as linear regression, but fed into sigmoid.",
+
+                loglossSingleTitle: "Log-Loss (Single Point)",
+                loglossSingleWhat: "<strong>What it is:</strong> Loss for one prediction. Penalizes confident wrong predictions heavily.",
+                loglossSingleCase1: "If \\(y=1\\): Loss = \\(-\\ln(\\hat{y})\\). Small when \\(\\hat{y}\\) is high.",
+                loglossSingleCase2: "If \\(y=0\\): Loss = \\(-\\ln(1-\\hat{y})\\). Small when \\(\\hat{y}\\) is low.",
+                loglossSingleNote: "<em>Note:</em> Uses \\(\\ln\\) (natural log). Loss approaches infinity as prediction approaches wrong extreme.",
+
+                bceTitle: "Binary Cross-Entropy (BCE)",
+                bceWhat: "<strong>What it is:</strong> Average Log-Loss across all training examples. The cost function to minimize.",
+                bceReason1: "Creates a convex surface (single global minimum).",
+                bceReason2: "Gradient descent always converges to optimal solution.",
+                bceReason3: "Derived from Maximum Likelihood Estimation (MLE).",
+                bceNote: "<em>Also known as:</em> Log-Loss, Negative Log-Likelihood.",
+
+                mseTitle: "MSE with Sigmoid (Avoid!)",
+                mseWhat: "<strong>What it is:</strong> Mean Squared Error applied to sigmoid output.",
+                mseReason1: "Creates a non-convex surface with local minima.",
+                mseReason2: "Gradient vanishes when sigmoid saturates (very slow learning).",
+                mseReason3: "Gradient descent may get stuck in wrong place.",
+                mseNote: "<em>Rule:</em> Use MSE for regression, Log-Loss for classification.",
+
+                gradientTitle: "Gradient for Log-Loss",
+                gradientWhat: "<strong>What it is:</strong> Direction to update weights to minimize loss.",
+                gradientReason1: "Surprisingly simple: error \\(\\times\\) input.",
+                gradientReason2: "Same form as linear regression gradient!",
+                gradientReason3: "No vanishing gradient problem (unlike MSE+Sigmoid).",
+                gradientNote: "<em>Update rule:</em> \\(w := w - \\alpha \\cdot \\frac{\\partial J}{\\partial w}\\)",
+
+                predictionTitle: "Classification Decision",
+                predictionWhat: "<strong>What it is:</strong> Converting probability to class label using threshold.",
+                predictionReason1: "Default threshold 0.5 = equal treatment of classes.",
+                predictionReason2: "Threshold can be adjusted for imbalanced datasets.",
+                predictionReason3: "Probability output allows confidence interpretation.",
+                predictionNote: "<em>Note:</em> Decision boundary is where \\(z = 0\\)."
+            },
+            ru: {
+                mainTitle: "Формулы логистической регрессии",
+                mainSubtitle: "Сигмоида, Log-Loss (бинарная кросс-энтропия) и градиентный спуск",
+                whyUseful: "Почему полезно:",
+                whyBad: "Почему ПЛОХО:",
+
+                sigmoidTitle: "Сигмоид-функция",
+                sigmoidWhat: "<strong>Что это:</strong> Преобразует любое число в вероятность от 0 до 1.",
+                sigmoidReason1: "Превращает неограниченный линейный выход в диапазон вероятностей [0, 1].",
+                sigmoidReason2: "Гладкая и дифференцируемая везде (градиентный спуск работает).",
+                sigmoidReason3: "Выход интерпретируется как P(y=1|x).",
+                sigmoidNote: "<em>Примечание:</em> При z=0 выход равен ровно 0.5 (граница решения).",
+
+                linearTitle: "Линейная комбинация (z)",
+                linearFormula: "$$ z = \\beta_0 + \\beta_1 x $$",
+                linearWhat: "<strong>Что это:</strong> Вход для сигмоид-функции, взвешенная сумма признаков.<ul><li>\\(x\\): Входной признак (например, часы обучения)</li><li>\\(\\beta_0\\) (или \\(b\\)): Смещение (bias)</li><li>\\(\\beta_1\\) (или \\(m\\), \\(w\\)): Наклон / Вес</li></ul>",
+                linearNote: "<em>Примечание:</em> То же, что в линейной регрессии, но подается в сигмоиду.",
+
+                loglossSingleTitle: "Log-Loss (одна точка)",
+                loglossSingleWhat: "<strong>Что это:</strong> Потери для одного предсказания. Сильно штрафует уверенные неправильные предсказания.",
+                loglossSingleCase1: "Если \\(y=1\\): Loss = \\(-\\ln(\\hat{y})\\). Маленький, когда \\(\\hat{y}\\) высокий.",
+                loglossSingleCase2: "Если \\(y=0\\): Loss = \\(-\\ln(1-\\hat{y})\\). Маленький, когда \\(\\hat{y}\\) низкий.",
+                loglossSingleNote: "<em>Примечание:</em> Использует \\(\\ln\\) (натуральный логарифм). Потери стремятся к бесконечности при приближении к неправильному экстремуму.",
+
+                bceTitle: "Бинарная кросс-энтропия (BCE)",
+                bceWhat: "<strong>Что это:</strong> Средний Log-Loss по всем обучающим примерам. Функция стоимости для минимизации.",
+                bceReason1: "Создает выпуклую поверхность (единственный глобальный минимум).",
+                bceReason2: "Градиентный спуск всегда сходится к оптимальному решению.",
+                bceReason3: "Выводится из метода максимального правдоподобия (MLE).",
+                bceNote: "<em>Также известна как:</em> Log-Loss, отрицательное логарифмическое правдоподобие.",
+
+                mseTitle: "MSE с сигмоидой (Избегать!)",
+                mseWhat: "<strong>Что это:</strong> Среднеквадратичная ошибка, применённая к выходу сигмоиды.",
+                mseReason1: "Создает невыпуклую поверхность с локальными минимумами.",
+                mseReason2: "Градиент затухает при насыщении сигмоиды (очень медленное обучение).",
+                mseReason3: "Градиентный спуск может застрять в неправильном месте.",
+                mseNote: "<em>Правило:</em> MSE для регрессии, Log-Loss для классификации.",
+
+                gradientTitle: "Градиент для Log-Loss",
+                gradientWhat: "<strong>Что это:</strong> Направление обновления весов для минимизации потерь.",
+                gradientReason1: "Удивительно просто: ошибка \\(\\times\\) вход.",
+                gradientReason2: "Та же форма, что и градиент линейной регрессии!",
+                gradientReason3: "Нет проблемы затухающего градиента (в отличие от MSE+Sigmoid).",
+                gradientNote: "<em>Правило обновления:</em> \\(w := w - \\alpha \\cdot \\frac{\\partial J}{\\partial w}\\)",
+
+                predictionTitle: "Решение о классификации",
+                predictionWhat: "<strong>Что это:</strong> Преобразование вероятности в метку класса с помощью порога.",
+                predictionReason1: "Порог 0.5 по умолчанию = равное отношение к классам.",
+                predictionReason2: "Порог можно настроить для несбалансированных датасетов.",
+                predictionReason3: "Вероятностный выход позволяет интерпретировать уверенность.",
+                predictionNote: "<em>Примечание:</em> Граница решения там, где \\(z = 0\\)."
+            }
+        };
+
+        function setLanguage(lang) {
+            // Update active button state
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase() === lang) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update text content
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+
+            // Re-render MathJax if necessary
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+    </script>
+
+</body>
+</html>
