@@ -972,7 +972,43 @@
     function updatePlot() {
         const xRange = [0, 8];
 
-        // 1. Sigmoid Curve
+        // 1. Individual sigmoid curves for each data point (trained on just that point)
+        const individualCurves = [];
+        state.data.forEach((p, i) => {
+            // Train model on single point using gradient descent (starting from 0,0)
+            let wSingle = 0, bSingle = 0;
+            const lr = 0.5;
+            const iterations = 500;
+
+            for (let iter = 0; iter < iterations; iter++) {
+                const z = wSingle * p.x + bSingle;
+                const pred = sigmoid(z);
+                const error = pred - p.y;
+                wSingle -= lr * error * p.x;
+                bSingle -= lr * error;
+            }
+
+            const singleX = [];
+            const singleY = [];
+            for (let x = xRange[0]; x <= xRange[1]; x += 0.1) {
+                singleX.push(x);
+                singleY.push(sigmoid(wSingle * x + bSingle));
+            }
+
+            const color = p.y === 1 ? '#4ecdc4' : '#ff6b6b';
+            individualCurves.push({
+                x: singleX,
+                y: singleY,
+                mode: 'lines',
+                line: { color: color, width: 2, dash: 'dash' },
+                name: `σ${i + 1}`,
+                showlegend: false,
+                hoverinfo: 'skip',
+                opacity: 0.6
+            });
+        });
+
+        // 2. Main Sigmoid Curve (combined model)
         const curveX = [];
         const curveY = [];
         for (let x = xRange[0]; x <= xRange[1]; x += 0.1) {
@@ -985,7 +1021,7 @@
             y: curveY,
             mode: 'lines',
             line: { color: '#3b82f6', width: 3 },
-            name: 'Sigmoid'
+            name: 'Sigmoid (combined)'
         };
 
         // 2. Data Points
@@ -996,7 +1032,7 @@
             x: passPoints.map(p => p.x),
             y: passPoints.map(p => p.y),
             mode: 'markers',
-            marker: { color: '#22c55e', size: 14, line: {color: 'white', width: 2} },
+            marker: { color: '#4ecdc4', size: 16, line: {color: 'white', width: 2} },
             type: 'scatter',
             name: 'Pass (1)',
             hoverinfo: 'x'
@@ -1006,7 +1042,7 @@
             x: failPoints.map(p => p.x),
             y: failPoints.map(p => p.y),
             mode: 'markers',
-            marker: { color: '#ef4444', size: 14, line: {color: 'white', width: 2} },
+            marker: { color: '#ff6b6b', size: 16, line: {color: 'white', width: 2} },
             type: 'scatter',
             name: 'Fail (0)',
             hoverinfo: 'x'
@@ -1035,20 +1071,20 @@
         const shapes = [];
         const annotations = [];
 
-        // Data points residuals (subtle) with labels only when showValues
-        state.data.forEach((p, i) => {
-            const yHat = sigmoid(state.w * p.x + state.b);
-            const color = p.y === 1 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+        // Data points residuals and annotations - only when showValues is ON
+        if (state.showValues) {
+            state.data.forEach((p, i) => {
+                const yHat = sigmoid(state.w * p.x + state.b);
+                const color = p.y === 1 ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 107, 107, 0.5)';
 
-            shapes.push({
-                type: 'line',
-                x0: p.x, y0: p.y,
-                x1: p.x, y1: yHat,
-                line: { color: color, width: 1.5, dash: 'dot' }
-            });
+                shapes.push({
+                    type: 'line',
+                    x0: p.x, y0: p.y,
+                    x1: p.x, y1: yHat,
+                    line: { color: color, width: 1.5, dash: 'dot' }
+                });
 
-            // Annotation only when Show Values is ON - show both ŷ and 1-ŷ
-            if (state.showValues) {
+                // Annotation - show both ŷ and 1-ŷ
                 const activeColor = '#000';
                 const grayColor = '#aaa';
 
@@ -1080,19 +1116,17 @@
                     xshift: -8,
                     yshift: 2
                 });
-            }
-        });
+            });
+        }
 
-        // Test point residual (more visible)
-        shapes.push({
-            type: 'line',
-            x0: tp.x, y0: tp.y,
-            x1: tp.x, y1: tpYHat,
-            line: { color: '#f97316', width: 2, dash: 'dash' }
-        });
-
-        // Test point annotation only when Show Values is ON - show both ŷ and 1-ŷ
+        // Test point residual and annotation - only when Show Values is ON
         if (state.showValues) {
+            shapes.push({
+                type: 'line',
+                x0: tp.x, y0: tp.y,
+                x1: tp.x, y1: tpYHat,
+                line: { color: '#f97316', width: 2, dash: 'dash' }
+            });
             const tpActiveColor = '#ea580c';
             const tpGrayColor = '#aaa';
 
@@ -1125,14 +1159,42 @@
             });
         }
 
+        // Threshold line at 0.5
+        const traceThreshold = {
+            x: [0, 8],
+            y: [0.5, 0.5],
+            mode: 'lines',
+            line: { color: 'gray', width: 2, dash: 'dot' },
+            name: 'Threshold 0.5',
+            showlegend: false,
+            hoverinfo: 'skip'
+        };
+
         // Merge shapes and annotations into layout
         const fullLayout = Object.assign({}, plotLayout, {
             shapes: shapes,
             annotations: annotations,
-            datarevision: Date.now()
+            datarevision: Date.now(),
+            showlegend: true,
+            legend: {
+                x: 1,
+                y: 1,
+                xanchor: 'right',
+                yanchor: 'top',
+                bgcolor: 'rgba(255,255,255,0.9)',
+                bordercolor: '#e2e8f0',
+                borderwidth: 1,
+                font: { size: 10 }
+            }
         });
 
-        Plotly.react('plotDiv', [traceCurve, tracePass, traceFail, traceTest], fullLayout, plotConfig);
+        // Build traces: individual curves first, then threshold, main curve, data points
+        const allTraces = [...individualCurves, traceThreshold, traceCurve, tracePass, traceFail];
+        // Add test point only when Show Values is ON
+        if (state.showValues) {
+            allTraces.push(traceTest);
+        }
+        Plotly.react('plotDiv', allTraces, fullLayout, plotConfig);
     }
 
     // --- Sidebar Resizer ---
