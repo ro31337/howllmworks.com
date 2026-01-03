@@ -973,12 +973,12 @@
         const xRange = [0, 8];
 
         // 1. Individual sigmoid curves for each data point (trained on just that point)
+        // No regularization - shows "ideal" curve each point wants
         const individualCurves = [];
         state.data.forEach((p, i) => {
-            // Train model on single point using gradient descent (starting from 0,0)
             let wSingle = 0, bSingle = 0;
             const lr = 0.5;
-            const iterations = 500;
+            const iterations = 2000;
 
             for (let iter = 0; iter < iterations; iter++) {
                 const z = wSingle * p.x + bSingle;
